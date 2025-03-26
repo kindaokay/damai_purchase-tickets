@@ -21,7 +21,7 @@
 	<modelVersion>4.0.0</modelVersion>
 
 	<groupId>com.example</groupId>
-	<artifactId>damai</artifactId>
+	<artifactId>damai_pro</artifactId>
 	<version>${revision}</version>
 	<packaging>pom</packaging>
 
@@ -89,6 +89,7 @@
 		<jaxb.version>2.3.0</jaxb.version>
 		<activation.version>1.1.1</activation.version>
 		<spotless-maven-plugin.version>2.22.1</spotless-maven-plugin.version>
+		<opencsv.version>5.9</opencsv.version>
 	</properties>
 	<dependencies>
 		<dependency>
