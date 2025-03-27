@@ -20,6 +20,7 @@ import com.damai.dto.AccountOrderCountDto;
 import com.damai.dto.AreaGetDto;
 import com.damai.dto.AreaSelectDto;
 import com.damai.dto.ProgramAddDto;
+import com.damai.dto.ProgramDataPreheatDto;
 import com.damai.dto.ProgramGetDto;
 import com.damai.dto.ProgramInvalidDto;
 import com.damai.dto.ProgramListDto;
@@ -194,6 +195,12 @@ public class ProgramService extends ServiceImpl<ProgramMapper, Program> {
     
     @Autowired
     private ProgramDelCacheData programDelCacheData;
+    
+    @Autowired
+    private ProgramOrderService programOrderService;
+    
+    @Autowired
+    private SeatService seatService;
     
     /**
      * 添加节目
@@ -804,30 +811,30 @@ public class ProgramService extends ServiceImpl<ProgramMapper, Program> {
                 Wrappers.lambdaQuery(Seat.class).eq(Seat::getProgramId, programId)
                         .in(Seat::getSellStatus,SellStatus.LOCK.getCode(),SellStatus.SOLD.getCode());
         List<Seat> seatList = seatMapper.selectList(seatQueryWrapper);
-        if (CollectionUtil.isEmpty(seatList)) {
-            return true;
+        if (CollectionUtil.isNotEmpty(seatList)) {
+            LambdaUpdateWrapper<Seat> seatUpdateWrapper =
+                    Wrappers.lambdaUpdate(Seat.class).eq(Seat::getProgramId, programId);
+            Seat seatUpdate = new Seat();
+            seatUpdate.setSellStatus(SellStatus.NO_SOLD.getCode());
+            seatMapper.update(seatUpdate,seatUpdateWrapper);
         }
-        LambdaUpdateWrapper<Seat> seatUpdateWrapper =
-                Wrappers.lambdaUpdate(Seat.class).eq(Seat::getProgramId, programId);
-        Seat seatUpdate = new Seat();
-        seatUpdate.setSellStatus(SellStatus.NO_SOLD.getCode());
-        seatMapper.update(seatUpdate,seatUpdateWrapper);
-        
         LambdaQueryWrapper<TicketCategory> ticketCategoryQueryWrapper =
                 Wrappers.lambdaQuery(TicketCategory.class).eq(TicketCategory::getProgramId, programId);
         List<TicketCategory> ticketCategories = ticketCategoryMapper.selectList(ticketCategoryQueryWrapper);
-        for (TicketCategory ticketCategory : ticketCategories) {
-            Long remainNumber = ticketCategory.getRemainNumber();
-            Long totalNumber = ticketCategory.getTotalNumber();
-            if (!(remainNumber.equals(totalNumber))) {
-                TicketCategory ticketCategoryUpdate = new TicketCategory();
-                ticketCategoryUpdate.setRemainNumber(totalNumber);
-                
-                LambdaUpdateWrapper<TicketCategory> ticketCategoryUpdateWrapper =
-                        Wrappers.lambdaUpdate(TicketCategory.class)
-                                .eq(TicketCategory::getProgramId, programId)
-                                .eq(TicketCategory::getId,ticketCategory.getId());
-                ticketCategoryMapper.update(ticketCategoryUpdate,ticketCategoryUpdateWrapper);
+        if (CollectionUtil.isNotEmpty(ticketCategories)) {
+            for (TicketCategory ticketCategory : ticketCategories) {
+                Long remainNumber = ticketCategory.getRemainNumber();
+                Long totalNumber = ticketCategory.getTotalNumber();
+                if (!(remainNumber.equals(totalNumber))) {
+                    TicketCategory ticketCategoryUpdate = new TicketCategory();
+                    ticketCategoryUpdate.setRemainNumber(totalNumber);
+                    
+                    LambdaUpdateWrapper<TicketCategory> ticketCategoryUpdateWrapper =
+                            Wrappers.lambdaUpdate(TicketCategory.class)
+                                    .eq(TicketCategory::getProgramId, programId)
+                                    .eq(TicketCategory::getId,ticketCategory.getId());
+                    ticketCategoryMapper.update(ticketCategoryUpdate,ticketCategoryUpdateWrapper);
+                }
             }
         }
         delRedisData(programId);
@@ -875,6 +882,30 @@ public class ProgramService extends ServiceImpl<ProgramMapper, Program> {
         localCacheProgramGroup.del(RedisKeyBuild.createRedisKey(RedisKeyManage.PROGRAM_GROUP, programId).getRelKey());
         localCacheProgramShowTime.del(RedisKeyBuild.createRedisKey(RedisKeyManage.PROGRAM_SHOW_TIME, programId).getRelKey());
         localCacheTicketCategory.del(programId);
+    }
+    
+    public Boolean dataPreheat(ProgramDataPreheatDto programDataPreheatDto){
+        ProgramResetExecuteDto programResetExecuteDto = new ProgramResetExecuteDto();
+        programResetExecuteDto.setProgramId(programDataPreheatDto.getProgramId());
+        //先把数据库中的座位和库存数据重置，然后删除本地缓存和redis缓存
+        programService.resetExecute(programResetExecuteDto);
+        
+        ProgramGetDto programGetDto = new ProgramGetDto();
+        programGetDto.setId(programDataPreheatDto.getProgramId());
+        //再将节目相关的数据预热到缓存中，包括本地缓存和redis缓存
+        ProgramVo programVo = getDetailV2(programGetDto);
+        if (Objects.isNull(programVo)) {
+            return false;
+        }
+        //再将座位和库存数据预热到redis缓存中
+        Date showDayTime = programVo.getShowDayTime();
+        List<TicketCategoryVo> ticketCategoryVoList = programVo.getTicketCategoryVoList();
+        for (TicketCategoryVo ticketCategoryVo : ticketCategoryVoList) {
+            seatService.selectSeatResolution(programDataPreheatDto.getProgramId(), 
+                    ticketCategoryVo.getId(), DateUtils.countBetweenSecond(DateUtils.now(), showDayTime), TimeUnit.SECONDS);
+            ticketCategoryService.getRedisRemainNumberResolution(programDataPreheatDto.getProgramId(), ticketCategoryVo.getId());
+        }
+        return true;
     }
 }
 

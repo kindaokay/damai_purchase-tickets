@@ -2,6 +2,7 @@ package com.damai.controller;
 
 import com.damai.common.ApiResponse;
 import com.damai.dto.ProgramAddDto;
+import com.damai.dto.ProgramDataPreheatDto;
 import com.damai.dto.ProgramGetDto;
 import com.damai.dto.ProgramInvalidDto;
 import com.damai.dto.ProgramListDto;
@@ -96,5 +97,11 @@ public class ProgramController {
     @PostMapping(value = "/local/detail")
     public ApiResponse<ProgramVo> localDetail(@Valid @RequestBody ProgramGetDto programGetDto) {
         return ApiResponse.ok(programService.localDetail(programGetDto));
+    }
+    
+    @Operation(summary  = "将要压测的节目相关数据进行预热(根据id)")
+    @PostMapping(value = "/data/preheat")
+    public ApiResponse<Boolean> dataPreheat(@Valid @RequestBody ProgramDataPreheatDto programDataPreheatDto) {
+        return ApiResponse.ok(programService.dataPreheat(programDataPreheatDto));
     }
 }
