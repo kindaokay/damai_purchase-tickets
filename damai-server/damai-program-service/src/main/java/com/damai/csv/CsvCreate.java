@@ -48,7 +48,7 @@ public class CsvCreate {
         List<String[]> csvData = new ArrayList<>();
         csvData.add(new String[]{"programId", "ticketCategoryId"});
         //节目id
-        String programId = "32";
+        String programId = "34";
         Map<String, Integer> data = createData();
         for (final Entry<String, Integer> entry : data.entrySet()) {
             //节目票档id
@@ -70,12 +70,13 @@ public class CsvCreate {
      * */
     public static Map<String,Integer> createData(){
         Map<String,Integer> map = new HashMap<>(10);
-        map.put("39",50);
-        map.put("38",50);
-        map.put("37",100);
-        map.put("36",300);
-        map.put("35",300);
-        map.put("34",200);
+        map.put("46",400);
+        map.put("45",400);
+        map.put("44",700);
+        map.put("43",700);
+        map.put("42",700);
+        map.put("41",700);
+        map.put("40",400);
         return map;
     }
 }
