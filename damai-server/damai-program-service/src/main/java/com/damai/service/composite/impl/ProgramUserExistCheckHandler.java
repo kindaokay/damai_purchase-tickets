@@ -2,7 +2,7 @@ package com.damai.service.composite.impl;
 
 import cn.hutool.core.collection.CollectionUtil;
 import com.alibaba.fastjson.JSON;
-import com.damai.client.OrderClient;
+import com.damai.client.ProgramClient;
 import com.damai.client.UserClient;
 import com.damai.common.ApiResponse;
 import com.damai.core.RedisKeyManage;
@@ -41,7 +41,7 @@ public class ProgramUserExistCheckHandler extends AbstractProgramCheckHandler {
     private RedisCache redisCache;
     
     @Autowired
-    private OrderClient orderClient;
+    private ProgramClient orderClient;
     
     @Autowired
     private ProgramService programService;

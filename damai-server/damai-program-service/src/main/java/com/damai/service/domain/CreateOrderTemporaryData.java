@@ -1,26 +1,28 @@
-package com.damai.dto;
+package com.damai.service.domain;
 
+import com.damai.vo.SeatVo;
 import lombok.AllArgsConstructor;
 import lombok.Data;
-import lombok.NoArgsConstructor;
+
+import java.util.List;
 
 /**
  * @program: 极度真实还原大麦网高并发实战项目。 添加 阿星不是程序员 微信，添加时备注 大麦 来获取项目的完整资料 
- * @description: 票据数据操作 dto
+ * @description: 创建订单临时需要的数据
  * @author: 阿星不是程序员
  **/
 @Data
-@NoArgsConstructor
 @AllArgsConstructor
-public class TicketCategoryCountDto {
+public class CreateOrderTemporaryData {
+
+    /**
+     * 记录id
+     */
+    private Long identifierId;
     
     /**
-     * 票档id
+     * 购买的座位
      * */
-    private Long ticketCategoryId;
-    
-    /**
-     * 数量
-     * */
-    private Long count;
+    private List<SeatVo> purchaseSeatList;
+   
 }

@@ -8,6 +8,7 @@ import com.baidu.fsg.uid.UidGenerator;
 import com.damai.client.OrderClient;
 import com.damai.common.ApiResponse;
 import com.damai.core.RedisKeyManage;
+import com.damai.domain.OrderCreateMq;
 import com.damai.dto.DelayOrderCancelDto;
 import com.damai.dto.OrderCreateDto;
 import com.damai.dto.OrderTicketUserCreateDto;
@@ -20,6 +21,7 @@ import com.damai.enums.SellStatus;
 import com.damai.exception.DaMaiFrameException;
 import com.damai.redis.RedisKeyBuild;
 import com.damai.service.delaysend.DelayOrderCancelSend;
+import com.damai.service.domain.CreateOrderTemporaryData;
 import com.damai.service.kafka.CreateOrderMqDomain;
 import com.damai.service.kafka.CreateOrderSend;
 import com.damai.service.lua.ProgramCacheCreateOrderData;
@@ -31,6 +33,7 @@ import com.damai.vo.ProgramVo;
 import com.damai.vo.SeatVo;
 import com.damai.vo.TicketCategoryVo;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -183,23 +186,28 @@ public class ProgramOrderService {
     
     
     public String createNew(ProgramOrderCreateDto programOrderCreateDto) {
-        List<SeatVo> purchaseSeatList = createOrderOperateProgramCacheResolution(programOrderCreateDto);
-        return doCreate(programOrderCreateDto,purchaseSeatList);
+        CreateOrderTemporaryData createOrderTemporaryData = createOrderOperateProgramCacheResolution(programOrderCreateDto);
+        return doCreate(programOrderCreateDto,createOrderTemporaryData.getPurchaseSeatList());
     }
     
     public String createNewAsync(ProgramOrderCreateDto programOrderCreateDto) {
-        List<SeatVo> purchaseSeatList = createOrderOperateProgramCacheResolution(programOrderCreateDto);
-        return doCreateV2(programOrderCreateDto,purchaseSeatList);
+        CreateOrderTemporaryData createOrderTemporaryData = createOrderOperateProgramCacheResolution(programOrderCreateDto);
+        return doCreateV2(programOrderCreateDto,createOrderTemporaryData);
     }
     
-    public List<SeatVo> createOrderOperateProgramCacheResolution(ProgramOrderCreateDto programOrderCreateDto){
+    public CreateOrderTemporaryData createOrderOperateProgramCacheResolution(ProgramOrderCreateDto programOrderCreateDto){
+        //从多级缓存中查找节目演出时间ProgramShowTime
         ProgramShowTime programShowTime =
                 programShowTimeService.selectProgramShowTimeByProgramIdMultipleCache(programOrderCreateDto.getProgramId());
+        //查询对应的票档类型
         List<TicketCategoryVo> getTicketCategoryList =
                 getTicketCategoryList(programOrderCreateDto,programShowTime.getShowTime());
+        //遍历得到的票档
         for (TicketCategoryVo ticketCategory : getTicketCategoryList) {
+            //从缓存中查询座位，如果缓存不存在，则从数据库查询后再放入缓存
             seatService.selectSeatResolution(programOrderCreateDto.getProgramId(), ticketCategory.getId(),
-                            DateUtils.countBetweenSecond(DateUtils.now(), programShowTime.getShowTime()), TimeUnit.SECONDS);
+                    DateUtils.countBetweenSecond(DateUtils.now(), programShowTime.getShowTime()), TimeUnit.SECONDS);
+            //从缓存中查询余票数量，如果缓存不存在，则从数据库查询后再放入缓存
             ticketCategoryService.getRedisRemainNumberResolution(
                     programOrderCreateDto.getProgramId(),ticketCategory.getId());
         }
@@ -207,8 +215,12 @@ public class ProgramOrderService {
         List<SeatDto> seatDtoList = programOrderCreateDto.getSeatDtoList();
         List<String> keys = new ArrayList<>();
         String[] data = new String[2];
+        //更新票档数据集合
         JSONArray jsonArray = new JSONArray();
+        //添加座位数据集合
         JSONArray addSeatDatajsonArray = new JSONArray();
+        //记录的标识
+        Long identifierId = uidGenerator.getUid();
         if (CollectionUtil.isNotEmpty(seatDtoList)) {
             keys.add("1");
             Map<Long, List<SeatDto>> seatTicketCategoryDtoCount = seatDtoList.stream()
@@ -216,16 +228,22 @@ public class ProgramOrderService {
             for (Entry<Long, List<SeatDto>> entry : seatTicketCategoryDtoCount.entrySet()) {
                 Long ticketCategoryId = entry.getKey();
                 int ticketCount = entry.getValue().size();
+                //这里是计算更新票档数据
                 JSONObject jsonObject = new JSONObject();
+                //票档数量的key
                 jsonObject.put("programTicketRemainNumberHashKey",RedisKeyBuild.createRedisKey(
                         RedisKeyManage.PROGRAM_TICKET_REMAIN_NUMBER_HASH_RESOLUTION, programId, ticketCategoryId).getRelKey());
+                //票档id
                 jsonObject.put("ticketCategoryId",ticketCategoryId);
+                //扣减余票数量
                 jsonObject.put("ticketCount",ticketCount);
                 jsonArray.add(jsonObject);
                 
                 JSONObject seatDatajsonObject = new JSONObject();
+                //未售卖座位的hash的key
                 seatDatajsonObject.put("seatNoSoldHashKey",RedisKeyBuild.createRedisKey(
                         RedisKeyManage.PROGRAM_SEAT_NO_SOLD_RESOLUTION_HASH, programId, ticketCategoryId).getRelKey());
+                //座位数据
                 seatDatajsonObject.put("seatDataList",JSON.toJSONString(seatDtoList));
                 addSeatDatajsonArray.add(seatDatajsonObject);
             }
@@ -234,25 +252,36 @@ public class ProgramOrderService {
             Long ticketCategoryId = programOrderCreateDto.getTicketCategoryId();
             Integer ticketCount = programOrderCreateDto.getTicketCount();
             JSONObject jsonObject = new JSONObject();
+            //票档数量的key
             jsonObject.put("programTicketRemainNumberHashKey",RedisKeyBuild.createRedisKey(
                     RedisKeyManage.PROGRAM_TICKET_REMAIN_NUMBER_HASH_RESOLUTION, programId, ticketCategoryId).getRelKey());
+            //票档id
             jsonObject.put("ticketCategoryId",ticketCategoryId);
+            //扣减余票数量
             jsonObject.put("ticketCount",ticketCount);
+            //未售卖座位的hash的key
             jsonObject.put("seatNoSoldHashKey",RedisKeyBuild.createRedisKey(
                     RedisKeyManage.PROGRAM_SEAT_NO_SOLD_RESOLUTION_HASH, programId, ticketCategoryId).getRelKey());
             jsonArray.add(jsonObject);
         }
+        //未售卖座位hash的key(占位符形式)
         keys.add(RedisKeyBuild.getRedisKey(RedisKeyManage.PROGRAM_SEAT_NO_SOLD_RESOLUTION_HASH));
+        //锁定座位hash的key(占位符形式)
         keys.add(RedisKeyBuild.getRedisKey(RedisKeyManage.PROGRAM_SEAT_LOCK_RESOLUTION_HASH));
         keys.add(String.valueOf(programOrderCreateDto.getProgramId()));
+        //记录的key(占位符形式)
+        keys.add(RedisKeyBuild.getRedisKey(RedisKeyManage.PROGRAM_RECORD));
+        //把记录的标识id放进去
+        keys.add(String.valueOf(identifierId));
         data[0] = JSON.toJSONString(jsonArray);
         data[1] = JSON.toJSONString(addSeatDatajsonArray);
-        ProgramCacheCreateOrderData programCacheCreateOrderData = 
+        //执行lua脚本
+        ProgramCacheCreateOrderData programCacheCreateOrderData =
                 programCacheCreateOrderResolutionOperate.programCacheOperate(keys, data);
         if (!Objects.equals(programCacheCreateOrderData.getCode(), BaseCode.SUCCESS.getCode())) {
             throw new DaMaiFrameException(Objects.requireNonNull(BaseCode.getRc(programCacheCreateOrderData.getCode())));
         }
-        return programCacheCreateOrderData.getPurchaseSeatList();
+        return new CreateOrderTemporaryData(identifierId,programCacheCreateOrderData.getPurchaseSeatList());
     }
     
     private String doCreate(ProgramOrderCreateDto programOrderCreateDto,List<SeatVo> purchaseSeatList){
@@ -267,10 +296,12 @@ public class ProgramOrderService {
         return orderNumber;
     }
     
-    private String doCreateV2(ProgramOrderCreateDto programOrderCreateDto,List<SeatVo> purchaseSeatList){
-        OrderCreateDto orderCreateDto = buildCreateOrderParam(programOrderCreateDto, purchaseSeatList);
-        
-        String orderNumber = createOrderByMq(orderCreateDto,purchaseSeatList);
+    private String doCreateV2(ProgramOrderCreateDto programOrderCreateDto,CreateOrderTemporaryData createOrderTemporaryData){
+        OrderCreateDto orderCreateDto = buildCreateOrderParam(programOrderCreateDto, createOrderTemporaryData.getPurchaseSeatList());
+        OrderCreateMq orderCreateMq = new OrderCreateMq();
+        BeanUtils.copyProperties(orderCreateDto,orderCreateMq);
+        orderCreateMq.setIdentifierId(createOrderTemporaryData.getIdentifierId());
+        String orderNumber = createOrderByMq(orderCreateMq,createOrderTemporaryData.getPurchaseSeatList());
         
         DelayOrderCancelDto delayOrderCancelDto = new DelayOrderCancelDto();
         delayOrderCancelDto.setOrderNumber(orderCreateDto.getOrderNumber());
@@ -330,18 +361,18 @@ public class ProgramOrderService {
         return createOrderResponse.getData();
     }
     
-    private String createOrderByMq(OrderCreateDto orderCreateDto,List<SeatVo> purchaseSeatList){
+    private String createOrderByMq(OrderCreateMq orderCreateMq,List<SeatVo> purchaseSeatList){
         CreateOrderMqDomain createOrderMqDomain = new CreateOrderMqDomain();
         CountDownLatch latch = new CountDownLatch(1);
-        createOrderSend.sendMessage(JSON.toJSONString(orderCreateDto),sendResult -> {
-            createOrderMqDomain.orderNumber = String.valueOf(orderCreateDto.getOrderNumber());
+        createOrderSend.sendMessage(JSON.toJSONString(orderCreateMq),sendResult -> {
+            createOrderMqDomain.orderNumber = String.valueOf(orderCreateMq.getOrderNumber());
             assert sendResult != null;
             log.info("创建订单kafka发送消息成功 topic : {}",sendResult.getRecordMetadata().topic());
             latch.countDown();
         },ex -> {
             log.error("创建订单kafka发送消息失败 error",ex);
-            log.error("创建订单失败 需人工处理 orderCreateDto : {}",JSON.toJSONString(orderCreateDto));
-            updateProgramCacheDataResolution(orderCreateDto.getProgramId(),purchaseSeatList,OrderStatus.CANCEL);
+            log.error("创建订单失败 需人工处理 orderCreateDto : {}",JSON.toJSONString(orderCreateMq));
+            updateProgramCacheDataResolution(orderCreateMq.getProgramId(),purchaseSeatList,OrderStatus.CANCEL);
             createOrderMqDomain.daMaiFrameException = new DaMaiFrameException(ex);
             latch.countDown();
         });

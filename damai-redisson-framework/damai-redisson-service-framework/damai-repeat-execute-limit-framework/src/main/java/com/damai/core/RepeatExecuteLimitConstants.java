@@ -16,4 +16,8 @@ public class RepeatExecuteLimitConstants {
     public static final String CREATE_PROGRAM_ORDER_MQ = "create_program_order_mq";
     
     public static final String PROGRAM_CACHE_REVERSE_MQ = "program_cache_reverse_mq";
+    
+    public final static String PAY_PROGRAM_ORDER = "pay_program_order";
+    
+    public final static String REDUCE_REMAIN_NUMBER = "reduce_remain_number";
 }

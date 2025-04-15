@@ -73,6 +73,8 @@ public enum RedisKeyManage {
     
     PROGRAM_CATEGORY_HASH("d_mai_program_category_hash","节目类型hash集合","节目类型hash集合","k"),
     
+    PROGRAM_RECORD("d_mai_program_record_%s","节目记录id","节目记录数据","k"),
+    
     COUNTER_COUNT("d_mai_counter_count","计数器的值的key","计数器的值","k"),
     
     COUNTER_TIMESTAMP("d_mai_counter_timestamp","计数器的时间戳的key","计数器的时间戳","k"),

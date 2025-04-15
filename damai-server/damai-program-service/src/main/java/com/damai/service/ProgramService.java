@@ -29,6 +29,7 @@ import com.damai.dto.ProgramPageListDto;
 import com.damai.dto.ProgramRecommendListDto;
 import com.damai.dto.ProgramResetExecuteDto;
 import com.damai.dto.ProgramSearchDto;
+import com.damai.dto.ReduceRemainNumberDto;
 import com.damai.dto.TicketCategoryCountDto;
 import com.damai.dto.TicketUserListDto;
 import com.damai.entity.Program;
@@ -105,7 +106,8 @@ import static com.damai.constant.Constant.USER_ID;
 import static com.damai.core.DistributedLockConstants.GET_PROGRAM_LOCK;
 import static com.damai.core.DistributedLockConstants.PROGRAM_GROUP_LOCK;
 import static com.damai.core.DistributedLockConstants.PROGRAM_LOCK;
-import static com.damai.core.RepeatExecuteLimitConstants.CANCEL_PROGRAM_ORDER;
+import static com.damai.core.RepeatExecuteLimitConstants.PAY_PROGRAM_ORDER;
+import static com.damai.core.RepeatExecuteLimitConstants.REDUCE_REMAIN_NUMBER;
 import static com.damai.util.DateUtils.FORMAT_DATE;
 
 /**
@@ -628,12 +630,52 @@ public class ProgramService extends ServiceImpl<ProgramMapper, Program> {
                         ticketCategory -> ticketCategory, (v1, v2) -> v2));
     }
     
-    @RepeatExecuteLimit(name = CANCEL_PROGRAM_ORDER,keys = {"#programOperateDataDto.programId","#programOperateDataDto.seatIdList"})
+    @RepeatExecuteLimit(name = REDUCE_REMAIN_NUMBER,keys = {"#reduceRemainNumberDto.programId","#reduceRemainNumberDto.seatIdList"})
+    @Transactional(rollbackFor = Exception.class)
+    public Boolean operateSeatLockAndTicketCategoryRemainNumber(ReduceRemainNumberDto reduceRemainNumberDto){
+        List<TicketCategoryCountDto> ticketCategoryCountDtoList = reduceRemainNumberDto.getTicketCategoryCountDtoList();
+        List<Long> seatIdList = reduceRemainNumberDto.getSeatIdList();
+        LambdaQueryWrapper<Seat> seatLambdaQueryWrapper = 
+                Wrappers.lambdaQuery(Seat.class)
+                        .eq(Seat::getProgramId,reduceRemainNumberDto.getProgramId())
+                        .in(Seat::getId, seatIdList);
+        List<Seat> seatList = seatMapper.selectList(seatLambdaQueryWrapper);
+        if (CollectionUtil.isEmpty(seatList)) {
+            throw new DaMaiFrameException(BaseCode.SEAT_NOT_EXIST);
+        }
+        if (seatList.size() != seatIdList.size()) {
+            throw new DaMaiFrameException(BaseCode.SEAT_UPDATE_REL_COUNT_NOT_EQUAL_PRESET_COUNT);
+        }
+        for (Seat seat : seatList) {
+            if (!Objects.equals(seat.getSellStatus(), SellStatus.SOLD.getCode())) {
+                throw new DaMaiFrameException(BaseCode.SEAT_IS_NOT_NOT_SOLD);
+            }
+        }
+        LambdaUpdateWrapper<Seat> seatLambdaUpdateWrapper = 
+                Wrappers.lambdaUpdate(Seat.class)
+                        .eq(Seat::getProgramId,reduceRemainNumberDto.getProgramId())
+                        .in(Seat::getId, seatIdList);
+        Seat updateSeat = new Seat();
+        updateSeat.setSellStatus(reduceRemainNumberDto.getSellStatus());
+        seatMapper.update(updateSeat,seatLambdaUpdateWrapper);
+        
+        int updateRemainNumberCount = 0;
+        for (TicketCategoryCountDto ticketCategoryCountDto : ticketCategoryCountDtoList) {
+            updateRemainNumberCount = updateRemainNumberCount + ticketCategoryMapper.updateRemainNumber(
+                    ticketCategoryCountDto.getCount(), ticketCategoryCountDto.getTicketCategoryId(),
+                    reduceRemainNumberDto.getProgramId());
+        }
+        if (updateRemainNumberCount != ticketCategoryCountDtoList.size()) {
+            throw new DaMaiFrameException(BaseCode.UPDATE_TICKET_CATEGORY_COUNT_NOT_CORRECT);
+        }
+        return true;
+    }
+    
+    @RepeatExecuteLimit(name = PAY_PROGRAM_ORDER,keys = {"#programOperateDataDto.programId","#programOperateDataDto.seatIdList"})
     @Transactional(rollbackFor = Exception.class)
     public void operateProgramData(ProgramOperateDataDto programOperateDataDto){
-        List<TicketCategoryCountDto> ticketCategoryCountDtoList = programOperateDataDto.getTicketCategoryCountDtoList();
         List<Long> seatIdList = programOperateDataDto.getSeatIdList();
-        LambdaQueryWrapper<Seat> seatLambdaQueryWrapper = 
+        LambdaQueryWrapper<Seat> seatLambdaQueryWrapper =
                 Wrappers.lambdaQuery(Seat.class)
                         .eq(Seat::getProgramId,programOperateDataDto.getProgramId())
                         .in(Seat::getId, seatIdList);
@@ -645,11 +687,11 @@ public class ProgramService extends ServiceImpl<ProgramMapper, Program> {
             throw new DaMaiFrameException(BaseCode.SEAT_UPDATE_REL_COUNT_NOT_EQUAL_PRESET_COUNT);
         }
         for (Seat seat : seatList) {
-            if (Objects.equals(seat.getSellStatus(), SellStatus.SOLD.getCode())) {
-                throw new DaMaiFrameException(BaseCode.SEAT_SOLD);
+            if (!Objects.equals(seat.getSellStatus(), SellStatus.LOCK.getCode())) {
+                throw new DaMaiFrameException(BaseCode.SEAT_IS_NOT_NOT_LOCK);
             }
         }
-        LambdaUpdateWrapper<Seat> seatLambdaUpdateWrapper = 
+        LambdaUpdateWrapper<Seat> seatLambdaUpdateWrapper =
                 Wrappers.lambdaUpdate(Seat.class)
                         .eq(Seat::getProgramId,programOperateDataDto.getProgramId())
                         .in(Seat::getId, seatIdList);
@@ -657,11 +699,15 @@ public class ProgramService extends ServiceImpl<ProgramMapper, Program> {
         updateSeat.setSellStatus(SellStatus.SOLD.getCode());
         seatMapper.update(updateSeat,seatLambdaUpdateWrapper);
         
-        int updateRemainNumberCount = 
-                ticketCategoryMapper.batchUpdateRemainNumber(ticketCategoryCountDtoList,programOperateDataDto.getProgramId());
-        if (updateRemainNumberCount != ticketCategoryCountDtoList.size()) {
-            throw new DaMaiFrameException(BaseCode.UPDATE_TICKET_CATEGORY_COUNT_NOT_CORRECT);
-        }
+//        int updateRemainNumberCount = 0;
+//        for (TicketCategoryCountDto ticketCategoryCountDto : ticketCategoryCountDtoList) {
+//            updateRemainNumberCount = updateRemainNumberCount + ticketCategoryMapper.updateRemainNumber(
+//                    ticketCategoryCountDto.getCount(), ticketCategoryCountDto.getTicketCategoryId(),
+//                    programOperateDataDto.getProgramId());
+//        }
+//        if (updateRemainNumberCount != ticketCategoryCountDtoList.size()) {
+//            throw new DaMaiFrameException(BaseCode.UPDATE_TICKET_CATEGORY_COUNT_NOT_CORRECT);
+//        }
     }
     
     private ProgramVo createProgramVo(Long programId){

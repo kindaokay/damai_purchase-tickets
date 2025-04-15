@@ -32,8 +32,10 @@
     <update id="updateRemainNumber">
         update
             d_ticket_category
-        set remain_number = remain_number - #{number,jdbcType=BIGINT}
+        set remain_number = remain_number - #{amount,jdbcType=BIGINT}
         where id = #{id,jdbcType=BIGINT}
+        and program_id = #{programId,jdbcType=BIGINT}
+        and <![CDATA[remain_number >= #{amount,jdbcType=BIGINT}]]>
     </update>
     
     <update id="batchUpdateRemainNumber">

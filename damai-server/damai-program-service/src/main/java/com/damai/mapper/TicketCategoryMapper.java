@@ -24,11 +24,14 @@ public interface TicketCategoryMapper extends BaseMapper<TicketCategory> {
     
     /**
      * 更新数量
-     * @param number 数量
-     * @param id id
+     * @param amount 数量
+     * @param id 票档id
+     * @param programId 节目id
      * @return 结果
      * */
-    int updateRemainNumber(@Param("number")Long number,@Param("id")Long id);
+    int updateRemainNumber(@Param("amount")Long amount,
+                           @Param("id")Long id,
+                           @Param("programId") Long programId);
     
     /**
      * 批量更新数量

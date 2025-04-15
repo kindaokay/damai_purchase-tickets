@@ -11,9 +11,11 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.damai.client.PayClient;
+import com.damai.client.ProgramClient;
 import com.damai.client.UserClient;
 import com.damai.common.ApiResponse;
 import com.damai.core.RedisKeyManage;
+import com.damai.domain.OrderCreateMq;
 import com.damai.dto.AccountOrderCountDto;
 import com.damai.dto.NotifyDto;
 import com.damai.dto.OrderCancelDto;
@@ -25,6 +27,7 @@ import com.damai.dto.OrderPayDto;
 import com.damai.dto.OrderTicketUserCreateDto;
 import com.damai.dto.PayDto;
 import com.damai.dto.ProgramOperateDataDto;
+import com.damai.dto.ReduceRemainNumberDto;
 import com.damai.dto.RefundDto;
 import com.damai.dto.TicketCategoryCountDto;
 import com.damai.dto.TradeCheckDto;
@@ -137,6 +140,9 @@ public class OrderService extends ServiceImpl<OrderMapper, Order> {
     @Autowired
     private ServiceLockTool serviceLockTool;
     
+    @Autowired
+    private ProgramClient programClient;
+    
     @Transactional(rollbackFor = Exception.class)
     public String create(OrderCreateDto orderCreateDto) {
         LambdaQueryWrapper<Order> orderLambdaQueryWrapper = 
@@ -163,6 +169,35 @@ public class OrderService extends ServiceImpl<OrderMapper, Order> {
                         orderCreateDto.getUserId(),
                         orderCreateDto.getProgramId()),
                 orderCreateDto.getOrderTicketUserCreateDtoList().size());
+        return String.valueOf(order.getOrderNumber());
+    }
+    
+    @Transactional(rollbackFor = Exception.class)
+    public String createByMq(OrderCreateMq orderCreateMq) {
+        LambdaQueryWrapper<Order> orderLambdaQueryWrapper =
+                Wrappers.lambdaQuery(Order.class).eq(Order::getOrderNumber, orderCreateMq.getOrderNumber());
+        Order oldOrder = orderMapper.selectOne(orderLambdaQueryWrapper);
+        if (Objects.nonNull(oldOrder)) {
+            throw new DaMaiFrameException(BaseCode.ORDER_EXIST);
+        }
+        Order order = new Order();
+        BeanUtil.copyProperties(orderCreateMq,order);
+        order.setDistributionMode("电子票");
+        order.setTakeTicketMode("请使用购票人身份证直接入场");
+        List<OrderTicketUser> orderTicketUserList = new ArrayList<>();
+        for (OrderTicketUserCreateDto orderTicketUserCreateDto : orderCreateMq.getOrderTicketUserCreateDtoList()) {
+            OrderTicketUser orderTicketUser = new OrderTicketUser();
+            BeanUtil.copyProperties(orderTicketUserCreateDto,orderTicketUser);
+            orderTicketUser.setId(uidGenerator.getUid());
+            orderTicketUserList.add(orderTicketUser);
+        }
+        orderMapper.insert(order);
+        orderTicketUserService.saveBatch(orderTicketUserList);
+        redisCache.incrBy(RedisKeyBuild.createRedisKey(
+                        RedisKeyManage.ACCOUNT_ORDER_COUNT,
+                        orderCreateMq.getUserId(),
+                        orderCreateMq.getProgramId()),
+                orderCreateMq.getOrderTicketUserCreateDtoList().size());
         return String.valueOf(order.getOrderNumber());
     }
     
@@ -486,7 +521,7 @@ public class OrderService extends ServiceImpl<OrderMapper, Order> {
             ProgramOperateDataDto programOperateDataDto = new ProgramOperateDataDto();
             programOperateDataDto.setProgramId(programId);
             programOperateDataDto.setSeatIdList(unLockSeatIdList);
-            programOperateDataDto.setTicketCategoryCountDtoList(ticketCategoryCountDtoList);
+            //programOperateDataDto.setTicketCategoryCountDtoList(ticketCategoryCountDtoList);
             programOperateDataDto.setSellStatus(SellStatus.SOLD.getCode());
             delayOperateProgramDataSend.sendMessage(JSON.toJSONString(programOperateDataDto));
         }
@@ -593,10 +628,30 @@ public class OrderService extends ServiceImpl<OrderMapper, Order> {
     }
     
     
-    @RepeatExecuteLimit(name = CREATE_PROGRAM_ORDER_MQ,keys = {"#orderCreateDto.orderNumber"})
+    @RepeatExecuteLimit(name = CREATE_PROGRAM_ORDER_MQ,keys = {"#orderCreateMq.orderNumber"})
     @Transactional(rollbackFor = Exception.class)
-    public String createMq(OrderCreateDto orderCreateDto){
-        String orderNumber = create(orderCreateDto);
+    public String createMq(OrderCreateMq orderCreateMq){
+        List<OrderTicketUserCreateDto> orderTicketUserCreateDtoList = orderCreateMq.getOrderTicketUserCreateDtoList();
+        
+        //使用 Stream API 按 ticketCategoryId 分组并计数
+        Map<Long, Long> countMap = orderTicketUserCreateDtoList.stream()
+                .collect(Collectors.groupingBy(OrderTicketUserCreateDto::getTicketCategoryId, Collectors.counting()));
+        
+        //将统计结果转换为列表，存入 TicketCountDto 对象中
+        List<TicketCategoryCountDto> ticketCountList = countMap.entrySet().stream()
+                .map(entry -> new TicketCategoryCountDto(entry.getKey(), entry.getValue()))
+                .toList();
+        //修改座位状态和扣减库存
+        ReduceRemainNumberDto reduceRemainNumberDto = new ReduceRemainNumberDto();
+        reduceRemainNumberDto.setProgramId(orderCreateMq.getProgramId());
+        reduceRemainNumberDto.setSellStatus(SellStatus.LOCK.getCode());
+        reduceRemainNumberDto.setSeatIdList(orderTicketUserCreateDtoList.stream().map(OrderTicketUserCreateDto::getSeatId).collect(Collectors.toList()));
+        reduceRemainNumberDto.setTicketCategoryCountDtoList(ticketCountList);
+        ApiResponse<Boolean> programApiResponse = programClient.operateSeatLockAndTicketCategoryRemainNumber(reduceRemainNumberDto);
+        if (!Objects.equals(programApiResponse.getCode(), BaseCode.SUCCESS.getCode())) {
+            throw new DaMaiFrameException(programApiResponse);
+        }
+        String orderNumber = createByMq(orderCreateMq);
         redisCache.set(RedisKeyBuild.createRedisKey(RedisKeyManage.ORDER_MQ,orderNumber),orderNumber,1, TimeUnit.MINUTES);
         return orderNumber;
     }

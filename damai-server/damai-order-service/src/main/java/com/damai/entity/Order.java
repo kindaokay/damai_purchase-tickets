@@ -30,6 +30,11 @@ public class Order extends BaseTableData implements Serializable {
      * 订单编号
      * */
     private Long orderNumber;
+    
+    /**
+     * 记录id
+     */
+    private Long identifierId;
 
     /**
      * 节目表id
