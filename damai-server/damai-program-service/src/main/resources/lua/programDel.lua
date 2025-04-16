@@ -6,6 +6,7 @@ local program_seat_lock_resolution_hash_key = KEYS[5]
 local program_seat_sold_resolution_hash_key = KEYS[6]
 local program_ticket_category_list_key = KEYS[7]
 local program_ticket_remain_number_hash_resolution_key = KEYS[8]
+local program_record_hash_key = KEYS[9]
 
 redis.call('del', program_key)
 redis.call('del', program_group_key)
@@ -32,6 +33,12 @@ redis.call('del', program_ticket_category_list_key)
 local program_ticket_remain_number_hash_resolution_list = redis.call('keys', program_ticket_remain_number_hash_resolution_key)
 if program_ticket_remain_number_hash_resolution_list then
     for index, key in ipairs(program_ticket_remain_number_hash_resolution_list) do
+        redis.call('del', key)
+    end
+end
+local program_record_hash_list = redis.call('keys', program_record_hash_key)
+if program_record_hash_list then
+    for index, key in ipairs(program_record_hash_list) do
         redis.call('del', key)
     end
 end

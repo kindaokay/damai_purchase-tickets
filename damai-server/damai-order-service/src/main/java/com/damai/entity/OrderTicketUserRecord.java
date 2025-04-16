@@ -7,16 +7,15 @@ import lombok.Data;
 import java.io.Serial;
 import java.io.Serializable;
 import java.math.BigDecimal;
-import java.util.Date;
 
 /**
  * @program: 极度真实还原大麦网高并发实战项目。 添加 阿星不是程序员 微信，添加时备注 大麦 来获取项目的完整资料 
- * @description: 购票人订单 实体
+ * @description: 购票人订单记录 实体
  * @author: 阿星不是程序员
  **/
 @Data
-@TableName("d_order_ticket_user")
-public class OrderTicketUser extends BaseTableData implements Serializable {
+@TableName("d_order_ticket_user_record")
+public class OrderTicketUserRecord extends BaseTableData implements Serializable {
 
     @Serial
     private static final long serialVersionUID = 1L;
@@ -30,6 +29,11 @@ public class OrderTicketUser extends BaseTableData implements Serializable {
      * 订单编号
      * */
     private Long orderNumber;
+    
+    /**
+     * 购票人订单id
+     * */
+    private Long ticketUserOrderId;
 
     /**
      * 节目表id
@@ -67,37 +71,17 @@ public class OrderTicketUser extends BaseTableData implements Serializable {
     private BigDecimal orderPrice;
 
     /**
-     * 支付订单价格
+     * 记录类型编码 -1:扣减余票 0:改变状态 1:增加余票
      */
-    private BigDecimal payOrderPrice;
-
+    private Integer recordTypeCode;
+    
     /**
-     * 支付订单方式
-     */
-    private Integer payOrderType;
-
-    /**
-     * 订单状态 1:未支付 2:已取消 3:已支付 4:已退单
-     */
-    private Integer orderStatus;
+     * 记录类型值 -1:扣减余票(reduce) 0:改变状态(changeStatus) 1:增加余票(increase)
+     * */
+    private String recordTypeValue;
 
     /**
      * 对账状态 1:未对账 -1:对账完成有问题 1:对账完成没有问题 2:对账有问题处理完毕
      */
     private Integer reconciliationStatus;
-
-    /**
-     * 生成订单时间
-     */
-    private Date createOrderTime;
-
-    /**
-     * 取消订单时间
-     */
-    private Date cancelOrderTime;
-
-    /**
-     * 支付订单时间
-     */
-    private Date payOrderTime;
 }

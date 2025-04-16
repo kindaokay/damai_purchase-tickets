@@ -91,4 +91,11 @@ public class OrderController {
     public ApiResponse<Boolean> cancel(@Valid @RequestBody OrderCancelDto orderCancelDto) {
         return ApiResponse.ok(orderService.initiateCancel(orderCancelDto));
     }
+
+    @Operation(summary  = "对账任务")
+    @PostMapping(value = "/reconciliation/task")
+    public ApiResponse<Boolean> reconciliationTask() {
+        orderService.reconciliationTask();
+        return ApiResponse.ok();
+    }
 }

@@ -95,6 +95,11 @@ public class Order extends BaseTableData implements Serializable {
      * 订单状态 1:未支付 2:已取消 3:已支付 4:已退单
      */
     private Integer orderStatus;
+    
+    /**
+     * 对账状态 1:未对账 -1:对账完成有问题 1:对账完成没有问题 2:对账有问题处理完毕
+     */
+    private Integer reconciliationStatus;
 
     /**
      * 生成订单时间

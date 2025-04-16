@@ -174,6 +174,8 @@ public enum BaseCode {
     
     SEAT_IS_NOT_NOT_LOCK(40033,"座位不是锁定"),
     
+    SEAT_OPERATE_IS_NOT_NOT_SOLD_OR_SOLD(40034,"座位操作状态只能是售卖或者为售卖"),
+    
     DELAY_QUEUE_CLIENT_NOT_EXIST(50001,"延迟队列客户端不存在"),
     
     DELAY_QUEUE_MESSAGE_NOT_EXIST(50002,"延迟队列消息不存在"),

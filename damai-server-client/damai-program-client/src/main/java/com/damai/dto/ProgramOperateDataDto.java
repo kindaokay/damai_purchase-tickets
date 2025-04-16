@@ -20,9 +20,9 @@ public class ProgramOperateDataDto {
     @NotNull
     private Long programId;
     
-//    @Schema(name ="ticketCategoryCountMap", type ="List<TicketCategoryCountDto>",requiredMode= RequiredMode.REQUIRED)
-//    @NotNull
-//    private List<TicketCategoryCountDto> ticketCategoryCountDtoList;
+    @Schema(name ="ticketCategoryCountMap", type ="List<TicketCategoryCountDto>",requiredMode= RequiredMode.REQUIRED)
+    @NotNull
+    private List<TicketCategoryCountDto> ticketCategoryCountDtoList;
     
     @Schema(name ="seatIdList", type ="List<Long>", description ="座位id集合",requiredMode= RequiredMode.REQUIRED)
     @NotNull

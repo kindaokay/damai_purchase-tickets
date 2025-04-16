@@ -22,9 +22,7 @@ public class Constant {
     
     public static final String USER_ID = "userId";
     
-    public static final String JOB_INFO_ID = "jobInfoId";
-    
-    public static final String JOB_RUN_RECORD_ID = "jobRunRecordId";
+    public static final String GLIDE_LINE = "_";
     
     public static final String ALIPAY_NOTIFY_SUCCESS_RESULT = "success";
     

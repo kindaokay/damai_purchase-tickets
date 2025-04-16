@@ -29,13 +29,22 @@
         group by program_id
     </select>
     
-    <update id="updateRemainNumber">
+    <update id="reduceRemainNumber">
         update
             d_ticket_category
         set remain_number = remain_number - #{amount,jdbcType=BIGINT}
         where id = #{id,jdbcType=BIGINT}
         and program_id = #{programId,jdbcType=BIGINT}
         and <![CDATA[remain_number >= #{amount,jdbcType=BIGINT}]]>
+    </update>
+
+    <update id="increaseRemainNumber">
+        update
+            d_ticket_category
+        set remain_number = remain_number + #{amount,jdbcType=BIGINT}
+        where id = #{id,jdbcType=BIGINT}
+          and program_id = #{programId,jdbcType=BIGINT}
+          and <![CDATA[remain_number + #{amount,jdbcType=BIGINT} <= total_number]]>
     </update>
     
     <update id="batchUpdateRemainNumber">

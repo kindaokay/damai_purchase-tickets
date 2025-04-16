@@ -23,13 +23,24 @@ public interface TicketCategoryMapper extends BaseMapper<TicketCategory> {
     List<TicketCategoryAggregate> selectAggregateList(@Param("programIdList")List<Long> programIdList);
     
     /**
-     * 更新数量
+     * 扣减数量
      * @param amount 数量
      * @param id 票档id
      * @param programId 节目id
      * @return 结果
      * */
-    int updateRemainNumber(@Param("amount")Long amount,
+    int reduceRemainNumber(@Param("amount")Long amount,
+                           @Param("id")Long id,
+                           @Param("programId") Long programId);
+    
+    /**
+     * 增加数量
+     * @param amount 数量
+     * @param id 票档id
+     * @param programId 节目id
+     * @return 结果
+     * */
+    int increaseRemainNumber(@Param("amount")Long amount,
                            @Param("id")Long id,
                            @Param("programId") Long programId);
     

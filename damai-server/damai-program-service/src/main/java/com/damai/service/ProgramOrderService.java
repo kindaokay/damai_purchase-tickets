@@ -9,14 +9,11 @@ import com.damai.client.OrderClient;
 import com.damai.common.ApiResponse;
 import com.damai.core.RedisKeyManage;
 import com.damai.domain.OrderCreateMq;
-import com.damai.dto.DelayOrderCancelDto;
-import com.damai.dto.OrderCreateDto;
-import com.damai.dto.OrderTicketUserCreateDto;
-import com.damai.dto.ProgramOrderCreateDto;
-import com.damai.dto.SeatDto;
+import com.damai.dto.*;
 import com.damai.entity.ProgramShowTime;
 import com.damai.enums.BaseCode;
 import com.damai.enums.OrderStatus;
+import com.damai.enums.RecordType;
 import com.damai.enums.SellStatus;
 import com.damai.exception.DaMaiFrameException;
 import com.damai.redis.RedisKeyBuild;
@@ -38,18 +35,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Objects;
-import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
+import static com.damai.constant.Constant.GLIDE_LINE;
 import static com.damai.service.constant.ProgramOrderConstant.ORDER_TABLE_COUNT;
 
 /**
@@ -272,7 +264,9 @@ public class ProgramOrderService {
         //记录的key(占位符形式)
         keys.add(RedisKeyBuild.getRedisKey(RedisKeyManage.PROGRAM_RECORD));
         //把记录的标识id放进去
-        keys.add(String.valueOf(identifierId));
+        keys.add(RecordType.REDUCE.getValue() + GLIDE_LINE + identifierId + GLIDE_LINE + programOrderCreateDto.getUserId());
+        //记录的类型
+        keys.add(RecordType.REDUCE.getValue());
         data[0] = JSON.toJSONString(jsonArray);
         data[1] = JSON.toJSONString(addSeatDatajsonArray);
         //执行lua脚本

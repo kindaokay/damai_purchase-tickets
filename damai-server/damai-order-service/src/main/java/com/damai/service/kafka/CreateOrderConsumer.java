@@ -2,8 +2,6 @@ package com.damai.service.kafka;
 
 import com.alibaba.fastjson.JSON;
 import com.damai.domain.OrderCreateMq;
-import com.damai.dto.OrderTicketUserCreateDto;
-import com.damai.enums.OrderStatus;
 import com.damai.service.OrderService;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -12,11 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 import static com.damai.constant.Constant.SPRING_INJECT_PREFIX_DISTINCTION_NAME;
 
@@ -50,20 +44,24 @@ public class CreateOrderConsumer {
                 
                 log.info("消费到kafka的创建订单消息 消息体: {} 延迟时间 : {} 毫秒",value,delayTime);
                 
-                if (currentTimeTimestamp - createOrderTimeTimestamp > MESSAGE_DELAY_TIME) {
-                    log.info("消费到kafka的创建订单消息延迟时间大于了 {} 毫秒 此订单消息被丢弃 订单号 : {}",
-                            delayTime,orderCreateMq.getOrderNumber());
-                    Map<Long, List<OrderTicketUserCreateDto>> orderTicketUserSeatList =
-                            orderCreateMq.getOrderTicketUserCreateDtoList().stream().collect(Collectors.groupingBy(OrderTicketUserCreateDto::getTicketCategoryId));
-                    Map<Long,List<Long>> seatMap = new HashMap<>(orderTicketUserSeatList.size());
-                    orderTicketUserSeatList.forEach((k,v) -> {
-                        seatMap.put(k,v.stream().map(OrderTicketUserCreateDto::getSeatId).collect(Collectors.toList()));
-                    });
-                    orderService.updateProgramRelatedDataMq(orderCreateMq.getProgramId(),seatMap, OrderStatus.CANCEL);
-                }else {
-                    String orderNumber = orderService.createMq(orderCreateMq);
-                    log.info("消费到kafka的创建订单消息 创建订单成功 订单号 : {}",orderNumber);
-                }
+                String orderNumber = orderService.createMq(orderCreateMq);
+                log.info("消费到kafka的创建订单消息 创建订单成功 订单号 : {}",orderNumber);
+                
+                //  TODO 延迟时间长，弃单的逻辑去掉
+//                if (currentTimeTimestamp - createOrderTimeTimestamp > MESSAGE_DELAY_TIME) {
+//                    log.info("消费到kafka的创建订单消息延迟时间大于了 {} 毫秒 此订单消息被丢弃 订单号 : {}",
+//                            delayTime,orderCreateMq.getOrderNumber());
+//                    Map<Long, List<OrderTicketUserCreateDto>> orderTicketUserSeatList =
+//                            orderCreateMq.getOrderTicketUserCreateDtoList().stream().collect(Collectors.groupingBy(OrderTicketUserCreateDto::getTicketCategoryId));
+//                    Map<Long,List<Long>> seatMap = new HashMap<>(orderTicketUserSeatList.size());
+//                    orderTicketUserSeatList.forEach((k,v) -> {
+//                        seatMap.put(k,v.stream().map(OrderTicketUserCreateDto::getSeatId).collect(Collectors.toList()));
+//                    });
+//                    orderService.updateProgramRelatedDataMq(orderCreateMq.getProgramId(),seatMap, OrderStatus.CANCEL);
+//                }else {
+//                    String orderNumber = orderService.createMq(orderCreateMq);
+//                    log.info("消费到kafka的创建订单消息 创建订单成功 订单号 : {}",orderNumber);
+//                }
             });
         }catch (Exception e) {
             log.error("处理消费到kafka的创建订单消息失败 error",e);

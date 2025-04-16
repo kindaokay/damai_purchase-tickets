@@ -106,7 +106,7 @@ import static com.damai.constant.Constant.USER_ID;
 import static com.damai.core.DistributedLockConstants.GET_PROGRAM_LOCK;
 import static com.damai.core.DistributedLockConstants.PROGRAM_GROUP_LOCK;
 import static com.damai.core.DistributedLockConstants.PROGRAM_LOCK;
-import static com.damai.core.RepeatExecuteLimitConstants.PAY_PROGRAM_ORDER;
+import static com.damai.core.RepeatExecuteLimitConstants.PAY_OR_CANCEL_PROGRAM_ORDER;
 import static com.damai.core.RepeatExecuteLimitConstants.REDUCE_REMAIN_NUMBER;
 import static com.damai.util.DateUtils.FORMAT_DATE;
 
@@ -647,7 +647,7 @@ public class ProgramService extends ServiceImpl<ProgramMapper, Program> {
             throw new DaMaiFrameException(BaseCode.SEAT_UPDATE_REL_COUNT_NOT_EQUAL_PRESET_COUNT);
         }
         for (Seat seat : seatList) {
-            if (!Objects.equals(seat.getSellStatus(), SellStatus.SOLD.getCode())) {
+            if (!Objects.equals(seat.getSellStatus(), SellStatus.NO_SOLD.getCode())) {
                 throw new DaMaiFrameException(BaseCode.SEAT_IS_NOT_NOT_SOLD);
             }
         }
@@ -661,7 +661,7 @@ public class ProgramService extends ServiceImpl<ProgramMapper, Program> {
         
         int updateRemainNumberCount = 0;
         for (TicketCategoryCountDto ticketCategoryCountDto : ticketCategoryCountDtoList) {
-            updateRemainNumberCount = updateRemainNumberCount + ticketCategoryMapper.updateRemainNumber(
+            updateRemainNumberCount = updateRemainNumberCount + ticketCategoryMapper.reduceRemainNumber(
                     ticketCategoryCountDto.getCount(), ticketCategoryCountDto.getTicketCategoryId(),
                     reduceRemainNumberDto.getProgramId());
         }
@@ -671,7 +671,7 @@ public class ProgramService extends ServiceImpl<ProgramMapper, Program> {
         return true;
     }
     
-    @RepeatExecuteLimit(name = PAY_PROGRAM_ORDER,keys = {"#programOperateDataDto.programId","#programOperateDataDto.seatIdList"})
+    @RepeatExecuteLimit(name = PAY_OR_CANCEL_PROGRAM_ORDER,keys = {"#programOperateDataDto.programId","#programOperateDataDto.seatIdList"})
     @Transactional(rollbackFor = Exception.class)
     public void operateProgramData(ProgramOperateDataDto programOperateDataDto){
         List<Long> seatIdList = programOperateDataDto.getSeatIdList();
@@ -686,28 +686,47 @@ public class ProgramService extends ServiceImpl<ProgramMapper, Program> {
         if (seatList.size() != seatIdList.size()) {
             throw new DaMaiFrameException(BaseCode.SEAT_UPDATE_REL_COUNT_NOT_EQUAL_PRESET_COUNT);
         }
+        //座位的操作状态只能是售卖或者未售卖
+        if (!Objects.equals(programOperateDataDto.getSellStatus(),SellStatus.SOLD.getCode()) && 
+                !Objects.equals(programOperateDataDto.getSellStatus(),SellStatus.NO_SOLD.getCode())) {
+            throw new DaMaiFrameException(BaseCode.SEAT_OPERATE_IS_NOT_NOT_SOLD_OR_SOLD);
+        }
+        //验证座位现在的状态，只能是锁定中
         for (Seat seat : seatList) {
             if (!Objects.equals(seat.getSellStatus(), SellStatus.LOCK.getCode())) {
                 throw new DaMaiFrameException(BaseCode.SEAT_IS_NOT_NOT_LOCK);
             }
         }
-        LambdaUpdateWrapper<Seat> seatLambdaUpdateWrapper =
-                Wrappers.lambdaUpdate(Seat.class)
-                        .eq(Seat::getProgramId,programOperateDataDto.getProgramId())
-                        .in(Seat::getId, seatIdList);
-        Seat updateSeat = new Seat();
-        updateSeat.setSellStatus(SellStatus.SOLD.getCode());
-        seatMapper.update(updateSeat,seatLambdaUpdateWrapper);
         
-//        int updateRemainNumberCount = 0;
-//        for (TicketCategoryCountDto ticketCategoryCountDto : ticketCategoryCountDtoList) {
-//            updateRemainNumberCount = updateRemainNumberCount + ticketCategoryMapper.updateRemainNumber(
-//                    ticketCategoryCountDto.getCount(), ticketCategoryCountDto.getTicketCategoryId(),
-//                    programOperateDataDto.getProgramId());
-//        }
-//        if (updateRemainNumberCount != ticketCategoryCountDtoList.size()) {
-//            throw new DaMaiFrameException(BaseCode.UPDATE_TICKET_CATEGORY_COUNT_NOT_CORRECT);
-//        }
+        Seat updateSeat = new Seat();
+        //订单支付成功的操作
+        if (Objects.equals(programOperateDataDto.getSellStatus(),SellStatus.SOLD.getCode())) {
+            updateSeat.setSellStatus(SellStatus.SOLD.getCode());
+            LambdaUpdateWrapper<Seat> seatLambdaUpdateWrapper =
+                    Wrappers.lambdaUpdate(Seat.class)
+                            .eq(Seat::getProgramId,programOperateDataDto.getProgramId())
+                            .in(Seat::getId, seatIdList);
+            seatMapper.update(updateSeat,seatLambdaUpdateWrapper);
+        } else if (Objects.equals(programOperateDataDto.getSellStatus(),SellStatus.NO_SOLD.getCode())) {
+          //订单取消的操作  
+            updateSeat.setSellStatus(SellStatus.NO_SOLD.getCode());
+            LambdaUpdateWrapper<Seat> seatLambdaUpdateWrapper =
+                    Wrappers.lambdaUpdate(Seat.class)
+                            .eq(Seat::getProgramId,programOperateDataDto.getProgramId())
+                            .in(Seat::getId, seatIdList);
+            seatMapper.update(updateSeat,seatLambdaUpdateWrapper);
+            List<TicketCategoryCountDto> ticketCategoryCountDtoList = programOperateDataDto.getTicketCategoryCountDtoList();
+            int updateRemainNumberCount = 0;
+            //把库存增加回去
+            for (TicketCategoryCountDto ticketCategoryCountDto : ticketCategoryCountDtoList) {
+                updateRemainNumberCount = updateRemainNumberCount + ticketCategoryMapper.increaseRemainNumber(
+                        ticketCategoryCountDto.getCount(), ticketCategoryCountDto.getTicketCategoryId(),
+                        programOperateDataDto.getProgramId());
+            }
+            if (updateRemainNumberCount != ticketCategoryCountDtoList.size()) {
+                throw new DaMaiFrameException(BaseCode.UPDATE_TICKET_CATEGORY_COUNT_NOT_CORRECT);
+            }
+        }
     }
     
     private ProgramVo createProgramVo(Long programId){
@@ -900,6 +919,7 @@ public class ProgramService extends ServiceImpl<ProgramMapper, Program> {
         keys.add(RedisKeyBuild.createRedisKey(RedisKeyManage.PROGRAM_SEAT_SOLD_RESOLUTION_HASH, programId,"*").getRelKey());
         keys.add(RedisKeyBuild.createRedisKey(RedisKeyManage.PROGRAM_TICKET_CATEGORY_LIST, programId).getRelKey());
         keys.add(RedisKeyBuild.createRedisKey(RedisKeyManage.PROGRAM_TICKET_REMAIN_NUMBER_HASH_RESOLUTION, programId,"*").getRelKey());
+        keys.add(RedisKeyBuild.createRedisKey(RedisKeyManage.PROGRAM_RECORD, programId).getRelKey());
         programDelCacheData.del(keys,new String[]{});
     }
     

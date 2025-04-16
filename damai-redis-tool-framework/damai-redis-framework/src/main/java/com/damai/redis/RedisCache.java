@@ -402,6 +402,18 @@ public interface RedisCache {
      * @return
      */
     <T> Map<String,T> getAllMapForHash(RedisKeyBuild redisKeyBuild, Class<T> clazz);
+
+    /**
+     * 谨慎使用！
+     * 获取 Hash Key 下所有值，返回值为map
+     *
+     * @param key 缓存key
+     * @param clazz 类型
+     * @param <T> 泛型
+     * @return
+     */
+    <T> Map<String,T> getAllMapForHash(String key, Class<T> clazz);
+    
     /**
      * 判断hash中 key是否存在
      *

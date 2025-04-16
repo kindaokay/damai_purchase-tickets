@@ -9,24 +9,23 @@ import org.springframework.stereotype.Component;
 
 /**
  * @program: 极度真实还原大麦网高并发实战项目。 添加 阿星不是程序员 微信，添加时备注 大麦 来获取项目的完整资料 
- * @description: 订单服务定时任务重置
+ * @description: 对账定时任务
  * @author: 阿星不是程序员
  **/
 @Slf4j
 @Component
-public class OrderDataTask {
-    
+public class ReconciliationTask {
+
     @Autowired
     private OrderService orderService;
-    
-    @Scheduled(cron = "0 0 23 * * ?")
-    public void executeTask(){
+
+    @Scheduled(cron = "0 0/1 * * * ? ")
+    public void reconciliationTask(){
         BusinessThreadPool.execute( () -> {
             try {
-                log.info("订单服务定时任务重置执行");
-                orderService.delOrderAndOrderTicketUser();
+                log.info("对账任务执行");
             }catch (Exception e) {
-                log.error("executeTask error",e);
+                log.error("reconciliation task error",e);
             }
         });
     }
