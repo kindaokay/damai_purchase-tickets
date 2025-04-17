@@ -3,6 +3,7 @@ USE damai_order_0;
 CREATE TABLE `d_order_ticket_user_record_0` (
   `id` bigint(20) NOT NULL COMMENT '主键id',
   `order_number` bigint(20) NOT NULL COMMENT '订单编号',
+  `identifier_id` bigint(20) DEFAULT NULL COMMENT '记录id',
   `ticket_user_order_id` bigint(20) NOT NULL COMMENT '购票人订单id',
   `program_id` bigint(20) NOT NULL COMMENT '节目表id',
   `user_id` bigint(20) NOT NULL COMMENT '用户id',
@@ -27,6 +28,7 @@ CREATE TABLE `d_order_ticket_user_record_0` (
 CREATE TABLE `d_order_ticket_user_record_1` (
   `id` bigint(20) NOT NULL COMMENT '主键id',
   `order_number` bigint(20) NOT NULL COMMENT '订单编号',
+  `identifier_id` bigint(20) DEFAULT NULL COMMENT '记录id',
   `ticket_user_order_id` bigint(20) NOT NULL COMMENT '购票人订单id',
   `program_id` bigint(20) NOT NULL COMMENT '节目表id',
   `user_id` bigint(20) NOT NULL COMMENT '用户id',
@@ -51,6 +53,7 @@ CREATE TABLE `d_order_ticket_user_record_1` (
 CREATE TABLE `d_order_ticket_user_record_2` (
   `id` bigint(20) NOT NULL COMMENT '主键id',
   `order_number` bigint(20) NOT NULL COMMENT '订单编号',
+  `identifier_id` bigint(20) DEFAULT NULL COMMENT '记录id',
   `ticket_user_order_id` bigint(20) NOT NULL COMMENT '购票人订单id',
   `program_id` bigint(20) NOT NULL COMMENT '节目表id',
   `user_id` bigint(20) NOT NULL COMMENT '用户id',
@@ -76,6 +79,7 @@ CREATE TABLE `d_order_ticket_user_record_2` (
 CREATE TABLE `d_order_ticket_user_record_3` (
   `id` bigint(20) NOT NULL COMMENT '主键id',
   `order_number` bigint(20) NOT NULL COMMENT '订单编号',
+  `identifier_id` bigint(20) DEFAULT NULL COMMENT '记录id',
   `ticket_user_order_id` bigint(20) NOT NULL COMMENT '购票人订单id',
   `program_id` bigint(20) NOT NULL COMMENT '节目表id',
   `user_id` bigint(20) NOT NULL COMMENT '用户id',

@@ -17,9 +17,7 @@ import com.damai.common.ApiResponse;
 import com.damai.core.RedisKeyManage;
 import com.damai.domain.OrderCreateDomain;
 import com.damai.domain.OrderCreateMq;
-import com.damai.domain.ProgramRecord;
-import com.damai.domain.SeatRecord;
-import com.damai.domain.TicketCategoryRecord;
+import com.damai.domain.SeatIdAndTicketUserIdDomain;
 import com.damai.dto.*;
 import com.damai.entity.Order;
 import com.damai.entity.OrderTicketUser;
@@ -53,8 +51,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import static com.damai.constant.Constant.ALIPAY_NOTIFY_SUCCESS_RESULT;
@@ -71,8 +67,6 @@ import static com.damai.core.RepeatExecuteLimitConstants.CREATE_PROGRAM_ORDER_MQ
 @Slf4j
 @Service
 public class OrderService extends ServiceImpl<OrderMapper, Order> {
-
-    private final Pattern PATTERN = Pattern.compile("_(\\d+)$");
     
     @Autowired
     private UidGenerator uidGenerator;
@@ -157,6 +151,7 @@ public class OrderService extends ServiceImpl<OrderMapper, Order> {
 
             OrderTicketUserRecord orderTicketUserRecord = new OrderTicketUserRecord();
             BeanUtil.copyProperties(orderTicketUserCreateDto,orderTicketUserRecord);
+            orderTicketUserRecord.setIdentifierId(orderCreateDomain.getIdentifierId());
             orderTicketUserRecord.setTicketUserOrderId(orderTicketUser.getId());
             orderTicketUserRecord.setRecordTypeCode(RecordType.REDUCE.getCode());
             orderTicketUserRecord.setRecordTypeValue(RecordType.REDUCE.getValue());
@@ -416,16 +411,21 @@ public class OrderService extends ServiceImpl<OrderMapper, Order> {
         if (updateOrderResult <= 0 || updateTicketUserOrderResult <= 0) {
             throw new DaMaiFrameException(BaseCode.ORDER_CANAL_ERROR);
         }
+        List<SeatIdAndTicketUserIdDomain> seatIdAndTicketUserIdDomainList = new ArrayList<>();
         List<OrderTicketUserRecord> orderTicketUserRecordList = new ArrayList<>();
         for (OrderTicketUser orderTicketUser : orderTicketUserList) {
             //购票人订单记录
             OrderTicketUserRecord orderTicketUserRecord = new OrderTicketUserRecord();
             BeanUtils.copyProperties(orderTicketUser,orderTicketUserRecord);
             orderTicketUserRecord.setId(uidGenerator.getUid());
+            orderTicketUserRecord.setIdentifierId(order.getIdentifierId());
             orderTicketUserRecord.setTicketUserOrderId(orderTicketUser.getId());
             orderTicketUserRecord.setRecordTypeCode(recordTypeCode);
             orderTicketUserRecord.setRecordTypeValue(recordTypeValue);
             orderTicketUserRecordList.add(orderTicketUserRecord);
+            //购票人订单id和座位id
+            seatIdAndTicketUserIdDomainList.add(new SeatIdAndTicketUserIdDomain(orderTicketUser.getSeatId(),
+                    orderTicketUser.getTicketUserId()));
         }
         //添加购票人订单记录流水
         orderTicketUserRecordService.saveBatch(orderTicketUserRecordList);
@@ -446,7 +446,7 @@ public class OrderService extends ServiceImpl<OrderMapper, Order> {
             seatMap.put(k,v.stream().map(OrderTicketUser::getSeatId).collect(Collectors.toList()));
         });
         //更新缓存相关数据
-        updateProgramRelatedDataResolution(programId,seatMap,orderStatus,order.getIdentifierId(),order.getUserId());
+        updateProgramRelatedDataResolution(programId,seatMap,orderStatus,order.getIdentifierId(),order.getUserId(),seatIdAndTicketUserIdDomainList);
     }
     
     public void checkOrderStatus(Order order){
@@ -466,7 +466,8 @@ public class OrderService extends ServiceImpl<OrderMapper, Order> {
     
     public void updateProgramRelatedDataResolution(Long programId,Map<Long,List<Long>> seatMap,
                                                    OrderStatus orderStatus,Long identifierId,
-                                                   Long userId){
+                                                   Long userId,
+                                                   List<SeatIdAndTicketUserIdDomain> seatIdAndTicketUserIdDomainList){
         Map<Long, List<SeatVo>> seatVoMap = new HashMap<>(seatMap.size());
         //从redis中查询锁定中的座位
         seatMap.forEach((k,v) -> {
@@ -562,7 +563,7 @@ public class OrderService extends ServiceImpl<OrderMapper, Order> {
         keys.add(recordTye + GLIDE_LINE + identifierId + GLIDE_LINE + userId);
         //记录的类型
         keys.add(recordTye);
-        Object[] data = new String[3];
+        Object[] data = new String[4];
         //扣除锁定的座位数据
         data[0] = JSON.toJSONString(unLockSeatIdjsonArray);
         //如果是订单取消的操作，那么添加到未售卖的座位数据
@@ -570,6 +571,7 @@ public class OrderService extends ServiceImpl<OrderMapper, Order> {
         data[1] = JSON.toJSONString(addSeatDatajsonArray);
         //恢复库存数据
         data[2] = JSON.toJSONString(jsonArray);
+        data[3] = JSON.toJSONString(seatIdAndTicketUserIdDomainList);
         //执行lua脚本
         orderProgramCacheResolutionOperate.programCacheReverseOperate(keys,data);
         //更新节目服务的相关数据（通过延迟队列）
@@ -691,7 +693,6 @@ public class OrderService extends ServiceImpl<OrderMapper, Order> {
     @Transactional(rollbackFor = Exception.class)
     public String createMq(OrderCreateMq orderCreateMq){
         List<OrderTicketUserCreateDto> orderTicketUserCreateDtoList = orderCreateMq.getOrderTicketUserCreateDtoList();
-        
         //使用 Stream API 按 ticketCategoryId 分组并计数
         Map<Long, Long> countMap = orderTicketUserCreateDtoList.stream()
                 .collect(Collectors.groupingBy(OrderTicketUserCreateDto::getTicketCategoryId, Collectors.counting()));
@@ -743,67 +744,5 @@ public class OrderService extends ServiceImpl<OrderMapper, Order> {
     public void delOrderAndOrderTicketUser(){
         orderMapper.relDelOrder();
         orderTicketUserMapper.relDelOrderTicketUser();
-    }
-    
-    public void reconciliationTask() {
-        Set<String> keys = redisCache.keys(RedisKeyBuild.createRedisKey(RedisKeyManage.PROGRAM_RECORD, "*").getRelKey());
-        if (CollectionUtil.isEmpty(keys)) {
-            return;
-        }
-        for (String key : keys) {
-            Map<String, String> programRecordMap = redisCache.getAllMapForHash(key, String.class);
-            if (CollectionUtil.isEmpty(programRecordMap)) {
-                continue;
-            }
-            Matcher matcher = PATTERN.matcher(key);
-            if (!matcher.find()) {
-                continue;
-            }
-            Long programId = Long.parseLong(matcher.group(1));
-            for (Map.Entry<String, String> entry : programRecordMap.entrySet()) {
-                String programRecordKey = entry.getKey();
-                String programRecordValue = entry.getValue();
-                String[] split = programRecordKey.split(GLIDE_LINE);
-                if (split.length != 3) {
-                    continue;
-                }
-                String recordTypeValue = split[0];
-                String identifierId = split[1];
-                String userId = split[2];
-                ProgramRecord programRecord = JSON.parseObject(programRecordValue, ProgramRecord.class);
-                Order order = orderMapper.selectOne(Wrappers.lambdaQuery(Order.class)
-                        .eq(Order::getReconciliationStatus, ReconciliationStatus.RECONCILIATION_NO.getCode())
-                        .eq(Order::getProgramId, programId)
-                        .eq(Order::getUserId, Long.parseLong(userId))
-                        .eq(Order::getIdentifierId, Long.parseLong(identifierId)));
-                if (Objects.isNull(order)) {
-                    //TODO
-                } else {
-                    List<OrderTicketUserRecord> orderTicketUserRecordList =
-                            orderTicketUserRecordService.list(Wrappers.lambdaQuery(OrderTicketUserRecord.class)
-                                    .eq(OrderTicketUserRecord::getOrderNumber, order.getOrderNumber()));
-                    if (CollectionUtil.isEmpty(orderTicketUserRecordList)) {
-                        continue;
-                    }
-                    int ticketCategoryRecordCount = orderTicketUserRecordList.size();
-                    List<TicketCategoryRecord> ticketCategoryRecordList = programRecord.getTicketCategoryRecordList();
-                    int seatRecordCount = ticketCategoryRecordList.stream()
-                            .mapToInt(record -> record.getSeatRecordList().size())
-                            .sum();
-                    int successCount = 0;
-                    for (OrderTicketUserRecord orderTicketUserRecord : orderTicketUserRecordList) {
-                        System.out.println("orderTicketUserRecord = " + orderTicketUserRecord);
-                        for (TicketCategoryRecord ticketCategoryRecord : ticketCategoryRecordList) {
-                            List<SeatRecord> seatRecordList = ticketCategoryRecord.getSeatRecordList();
-                            for (SeatRecord seatRecord : seatRecordList) {
-                                if (Objects.equals(seatRecord.getSeatId(),orderTicketUserRecord.getSeatId())) {
-                                    successCount++;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
     }
 }

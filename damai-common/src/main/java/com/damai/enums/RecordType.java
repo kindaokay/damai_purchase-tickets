@@ -1,5 +1,7 @@
 package com.damai.enums;
 
+import java.util.Objects;
+
 /**
  * @program: 极度真实还原大麦网高并发实战项目。 添加 阿星不是程序员 微信，添加时备注 大麦 来获取项目的完整资料 
  * @description: 记录类型
@@ -62,12 +64,21 @@ public enum RecordType {
         return "";
     }
 
-    public static RecordType getRc(Integer code) {
+    public static RecordType getRecordType(Integer code) {
         for (RecordType re : RecordType.values()) {
             if (re.code.intValue() == code.intValue()) {
                 return re;
             }
         }
         return null;
+    }
+
+    public static Integer getCodeByValue(String value) {
+        for (RecordType re : RecordType.values()) {
+            if (Objects.equals(re.value, value)) {
+                return re.code;
+            }
+        }
+        return Integer.MIN_VALUE;
     }
 }

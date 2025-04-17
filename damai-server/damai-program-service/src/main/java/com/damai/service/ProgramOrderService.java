@@ -9,6 +9,7 @@ import com.damai.client.OrderClient;
 import com.damai.common.ApiResponse;
 import com.damai.core.RedisKeyManage;
 import com.damai.domain.OrderCreateMq;
+import com.damai.domain.PurchaseSeat;
 import com.damai.dto.*;
 import com.damai.entity.ProgramShowTime;
 import com.damai.enums.BaseCode;
@@ -179,7 +180,12 @@ public class ProgramOrderService {
     
     public String createNew(ProgramOrderCreateDto programOrderCreateDto) {
         CreateOrderTemporaryData createOrderTemporaryData = createOrderOperateProgramCacheResolution(programOrderCreateDto);
-        return doCreate(programOrderCreateDto,createOrderTemporaryData.getPurchaseSeatList());
+        List<SeatVo> purchaseSeatList = createOrderTemporaryData.getPurchaseSeatList().stream().map(purchaseSeat -> {
+            SeatVo seatVo = new SeatVo();
+            BeanUtils.copyProperties(purchaseSeat,seatVo);
+            return seatVo;
+        }).collect(Collectors.toList());
+        return doCreate(programOrderCreateDto,purchaseSeatList);
     }
     
     public String createNewAsync(ProgramOrderCreateDto programOrderCreateDto) {
@@ -206,7 +212,7 @@ public class ProgramOrderService {
         Long programId = programOrderCreateDto.getProgramId();
         List<SeatDto> seatDtoList = programOrderCreateDto.getSeatDtoList();
         List<String> keys = new ArrayList<>();
-        String[] data = new String[2];
+        String[] data = new String[3];
         //更新票档数据集合
         JSONArray jsonArray = new JSONArray();
         //添加座位数据集合
@@ -269,6 +275,8 @@ public class ProgramOrderService {
         keys.add(RecordType.REDUCE.getValue());
         data[0] = JSON.toJSONString(jsonArray);
         data[1] = JSON.toJSONString(addSeatDatajsonArray);
+        //购票人id集合
+        data[2] = JSON.toJSONString(programOrderCreateDto.getTicketUserIdList());
         //执行lua脚本
         ProgramCacheCreateOrderData programCacheCreateOrderData =
                 programCacheCreateOrderResolutionOperate.programCacheOperate(keys, data);
@@ -291,7 +299,8 @@ public class ProgramOrderService {
     }
     
     private String doCreateV2(ProgramOrderCreateDto programOrderCreateDto,CreateOrderTemporaryData createOrderTemporaryData){
-        OrderCreateDto orderCreateDto = buildCreateOrderParam(programOrderCreateDto, createOrderTemporaryData.getPurchaseSeatList());
+        OrderCreateDto orderCreateDto = buildCreateOrderParamV2(programOrderCreateDto.getProgramId(),
+                programOrderCreateDto.getUserId(), createOrderTemporaryData.getPurchaseSeatList());
         OrderCreateMq orderCreateMq = new OrderCreateMq();
         BeanUtils.copyProperties(orderCreateDto,orderCreateMq);
         orderCreateMq.setIdentifierId(createOrderTemporaryData.getIdentifierId());
@@ -344,6 +353,40 @@ public class ProgramOrderService {
         
         return orderCreateDto;
     }
+
+    private OrderCreateDto buildCreateOrderParamV2(Long programId,Long userId,List<PurchaseSeat> purchaseSeatList){
+        ProgramVo programVo = programService.simpleGetProgramAndShowMultipleCache(programId);
+        OrderCreateDto orderCreateDto = new OrderCreateDto();
+        orderCreateDto.setOrderNumber(uidGenerator.getOrderNumber(userId,ORDER_TABLE_COUNT));
+        orderCreateDto.setProgramId(programId);
+        orderCreateDto.setProgramItemPicture(programVo.getItemPicture());
+        orderCreateDto.setUserId(userId);
+        orderCreateDto.setProgramTitle(programVo.getTitle());
+        orderCreateDto.setProgramPlace(programVo.getPlace());
+        orderCreateDto.setProgramShowTime(programVo.getShowTime());
+        orderCreateDto.setProgramPermitChooseSeat(programVo.getPermitChooseSeat());
+        BigDecimal databaseOrderPrice =
+                purchaseSeatList.stream().map(PurchaseSeat::getPrice).reduce(BigDecimal.ZERO, BigDecimal::add);
+        orderCreateDto.setOrderPrice(databaseOrderPrice);
+        orderCreateDto.setCreateOrderTime(DateUtils.now());
+        
+        List<OrderTicketUserCreateDto> orderTicketUserCreateDtoList = new ArrayList<>();
+        for (PurchaseSeat purchaseSeat : purchaseSeatList) {
+            OrderTicketUserCreateDto orderTicketUserCreateDto = new OrderTicketUserCreateDto();
+            orderTicketUserCreateDto.setOrderNumber(orderCreateDto.getOrderNumber());
+            orderTicketUserCreateDto.setProgramId(programId);
+            orderTicketUserCreateDto.setUserId(userId);
+            orderTicketUserCreateDto.setTicketUserId(purchaseSeat.getTicketUserId());
+            orderTicketUserCreateDto.setSeatId(purchaseSeat.getId());
+            orderTicketUserCreateDto.setSeatInfo(purchaseSeat.getRowCode()+"排"+purchaseSeat.getColCode()+"列");
+            orderTicketUserCreateDto.setTicketCategoryId(purchaseSeat.getTicketCategoryId());
+            orderTicketUserCreateDto.setOrderPrice(purchaseSeat.getPrice());
+            orderTicketUserCreateDto.setCreateOrderTime(DateUtils.now());
+            orderTicketUserCreateDtoList.add(orderTicketUserCreateDto);
+        }
+        orderCreateDto.setOrderTicketUserCreateDtoList(orderTicketUserCreateDtoList);
+        return orderCreateDto;
+    }
     
     private String createOrderByRpc(OrderCreateDto orderCreateDto,List<SeatVo> purchaseSeatList){
         ApiResponse<String> createOrderResponse = orderClient.create(orderCreateDto);
@@ -355,7 +398,7 @@ public class ProgramOrderService {
         return createOrderResponse.getData();
     }
     
-    private String createOrderByMq(OrderCreateMq orderCreateMq,List<SeatVo> purchaseSeatList){
+    private String createOrderByMq(OrderCreateMq orderCreateMq,List<PurchaseSeat> purchaseSeatList){
         CreateOrderMqDomain createOrderMqDomain = new CreateOrderMqDomain();
         CountDownLatch latch = new CountDownLatch(1);
         createOrderSend.sendMessage(JSON.toJSONString(orderCreateMq),sendResult -> {
@@ -366,7 +409,12 @@ public class ProgramOrderService {
         },ex -> {
             log.error("创建订单kafka发送消息失败 error",ex);
             log.error("创建订单失败 需人工处理 orderCreateDto : {}",JSON.toJSONString(orderCreateMq));
-            updateProgramCacheDataResolution(orderCreateMq.getProgramId(),purchaseSeatList,OrderStatus.CANCEL);
+            List<SeatVo> purchaseSeatVoList = purchaseSeatList.stream().map(purchaseSeat -> {
+                SeatVo seatVo = new SeatVo();
+                BeanUtils.copyProperties(purchaseSeat,seatVo);
+                return seatVo;
+            }).collect(Collectors.toList());
+            updateProgramCacheDataResolution(orderCreateMq.getProgramId(),purchaseSeatVoList,OrderStatus.CANCEL);
             createOrderMqDomain.daMaiFrameException = new DaMaiFrameException(ex);
             latch.countDown();
         });

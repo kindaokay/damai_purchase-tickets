@@ -14,6 +14,8 @@ local un_lock_seat_id_json_array = cjson.decode(ARGV[1])
 local add_seat_data_json_array = cjson.decode(ARGV[2])
 -- 票档数量数据
 local ticket_category_list = cjson.decode(ARGV[3])
+-- 座位id和购票人id的映射
+local seat_id_and_ticket_user_id_domain_list = cjson.decode(ARGV[4])
 -- 锁定状态
 local lock_status = 2
 -- 将锁定的座位集合进行扣除
@@ -42,6 +44,13 @@ for index, add_seat_data_json_object in pairs(add_seat_data_json_array) do
         seat_record.seatId = seat_object.id
         seat_record.beforeStatus = lock_status
         seat_record.afterStatus = seat_object.sellStatus
+        -- 把购票人id映射上
+        for j, seat_id_and_ticket_user_id_domain in ipairs(seat_id_and_ticket_user_id_domain_list) do
+            if (seat_record.seatId == seat_id_and_ticket_user_id_domain.seatId) then
+                seat_record.ticketUserId = seat_id_and_ticket_user_id_domain.ticketUserId
+                break
+            end
+        end
         -- 将座位记录添加到座位集合记录中
         table.insert(total_seat_record_list,seat_record)
     end

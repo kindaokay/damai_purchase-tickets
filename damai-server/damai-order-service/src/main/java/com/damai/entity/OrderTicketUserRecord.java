@@ -29,6 +29,11 @@ public class OrderTicketUserRecord extends BaseTableData implements Serializable
      * 订单编号
      * */
     private Long orderNumber;
+
+    /**
+     * 记录id
+     */
+    private Long identifierId;
     
     /**
      * 购票人订单id

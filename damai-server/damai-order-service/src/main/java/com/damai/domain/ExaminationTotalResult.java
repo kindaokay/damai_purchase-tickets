@@ -1,0 +1,34 @@
+package com.damai.domain;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.util.List;
+
+/**
+ * @program: 极度真实还原大麦网高并发实战项目。 添加 阿星不是程序员 微信，添加时备注 大麦 来获取项目的完整资料 
+ * @description: redis和数据对账结果(总结果)
+ * @author: 阿星不是程序员
+ **/
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class ExaminationTotalResult {
+
+    /**
+     * 节目id
+     * */
+    private Long programId;
+
+    /**
+     * 以redis记录为主的对比结果
+     * */
+    private List<ExaminationIdentifierResult> examinationIdentifierResultRedisStandardList;
+
+    /**
+     * 以数据库记录为主的对比结果
+     * */
+    List<ExaminationIdentifierResult> examinationIdentifierResultDbStandardList;
+    
+}

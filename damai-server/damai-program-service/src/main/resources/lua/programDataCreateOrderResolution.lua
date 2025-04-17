@@ -14,6 +14,8 @@ local identifier_id = KEYS[6]
 local record_type = KEYS[7]
 -- 要购买的票档 包括票档id和票档数量
 local ticket_count_list = cjson.decode(ARGV[1])
+-- 购票人id集合
+local ticket_user_id_list = cjson.decode(ARGV[3])
 -- 过滤后符合条件可以购买的座位集合
 local purchase_seat_list = {}
 -- 入参座位价格总和
@@ -92,12 +94,14 @@ if (type == 1) then
     
     -- 座位集合
     local seat_data_list= cjson.decode(ARGV[2])
+    local seat_index = 0
     for index, seatData in pairs(seat_data_list) do
         -- 没有售卖的座位key
         local seat_no_sold_hash_key = seatData.seatNoSoldHashKey;
         -- 入参座位集合
         local seat_dto_list = cjson.decode(seatData.seatDataList)
         for index2,seat_dto in ipairs(seat_dto_list) do
+            seat_index = seat_index + 1
             -- 入参座位id
             local id = seat_dto.id
             -- 入参座位价格
@@ -117,6 +121,8 @@ if (type == 1) then
             if (seat_vo.sellStatus == 3) then
                 return string.format('{"%s": %d}', 'code', 40003)
             end
+            -- 绑定上购票人id
+            -- seat_vo.ticketUserId = ticket_user_id_list[index]
             table.insert(purchase_seat_list,seat_vo)
             -- 入参座位价格累加
             total_seat_dto_price = total_seat_dto_price + seat_dto_price
@@ -126,7 +132,7 @@ if (type == 1) then
                 return string.format('{"%s": %d}', 'code', 40008)
             end
             
-            for index, ticket_category_record in pairs(ticket_category_record_list) do
+            for index3, ticket_category_record in pairs(ticket_category_record_list) do
                 if ticket_category_record.ticketCategoryId == seat_vo.ticketCategoryId then
                     -- 先构建好座位记录
                     if not ticket_category_record.seatRecordList then
@@ -138,6 +144,8 @@ if (type == 1) then
                     seat_record.seatId = id
                     seat_record.beforeStatus = seat_vo.sellStatus
                     seat_record.afterStatus = lock_status
+                    seat_record.ticketUserId = ticket_user_id_list[seat_index]
+                    seat_vo.ticketUserId = ticket_user_id_list[seat_index]
                     table.insert(ticket_category_record.seatRecordList,seat_record)
                 end
             end
@@ -191,7 +199,7 @@ if (type == 2) then
             return string.format('{"%s": %d}', 'code', 40004)
         end
 
-        for index,purchase_seat in ipairs(purchase_seat_list) do
+        for index2,purchase_seat in ipairs(purchase_seat_list) do
             -- 先构建好座位记录
             if not ticket_category_record.seatRecordList then
                 ticket_category_record.seatRecordList = {}
@@ -202,6 +210,9 @@ if (type == 2) then
             seat_record.seatId = purchase_seat.id
             seat_record.beforeStatus = purchase_seat.sellStatus
             seat_record.afterStatus = lock_status
+            seat_record.ticketUserId = ticket_user_id_list[index2]
+            -- 绑定上购票人id
+            purchase_seat.ticketUserId = ticket_user_id_list[index2]
             table.insert(ticket_category_record.seatRecordList,seat_record)
         end
         
@@ -256,7 +267,6 @@ local purchase_record = {
     recordType = record_type,
     timestamp = currentTimeMillis,
     ticketCategoryRecordList = ticket_category_record_list
-    
 }
 redis.call('hset',string.format(record_hash_key,program_id),identifier_id,cjson.encode(purchase_record))
 
