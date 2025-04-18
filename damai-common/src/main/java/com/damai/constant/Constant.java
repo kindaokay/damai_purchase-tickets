@@ -1,5 +1,7 @@
 package com.damai.constant;
 
+import com.damai.enums.RecordType;
+
 /**
  * @program: 极度真实还原大麦网高并发实战项目。 添加 阿星不是程序员 微信，添加时备注 大麦 来获取项目的完整资料 
  * @description: 常量
@@ -35,5 +37,11 @@ public class Constant {
     public static final String SPRING_INJECT_PREFIX_DISTINCTION_NAME = "${"+PREFIX_DISTINCTION_NAME+":"+DEFAULT_PREFIX_DISTINCTION_NAME+"}";
     
     public static final String SERVER_GRAY = "${spring.cloud.nacos.discovery.metadata.gray:false}";
+
+    public static final String REDUCE = RecordType.REDUCE.getValue();
+    
+    public static final String CHANGE_STATUS = RecordType.CHANGE_STATUS.getValue();
+    
+    public static final String INCREASE = RecordType.INCREASE.getValue();
     
 }

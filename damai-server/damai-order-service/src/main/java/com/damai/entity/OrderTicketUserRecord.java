@@ -89,4 +89,9 @@ public class OrderTicketUserRecord extends BaseTableData implements Serializable
      * 对账状态 1:未对账 -1:对账完成有问题 1:对账完成没有问题 2:对账有问题处理完毕
      */
     private Integer reconciliationStatus;
+    
+    /**
+     * 创建类型 1:正常创建 2:补偿创建
+     * */
+    private Integer createType;
 }

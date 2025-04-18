@@ -75,6 +75,8 @@ public enum RedisKeyManage {
     
     PROGRAM_RECORD("d_mai_program_record_%s","节目记录id","节目记录数据","k"),
     
+    PROGRAM_RECORD_FINISH("d_mai_program_record_finish_%s","节目记录id","节目记录数据","k"),
+    
     COUNTER_COUNT("d_mai_counter_count","计数器的值的key","计数器的值","k"),
     
     COUNTER_TIMESTAMP("d_mai_counter_timestamp","计数器的时间戳的key","计数器的时间戳","k"),

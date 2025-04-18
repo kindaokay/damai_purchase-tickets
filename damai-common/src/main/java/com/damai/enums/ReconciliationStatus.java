@@ -11,8 +11,8 @@ public enum ReconciliationStatus {
      * */
     RECONCILIATION_NO(1, "未对账"),
     RECONCILIATION_FAIL(-1,"对账完成有问题"),
-    RECONCILIATION_SUCCESS(1,"对账完成没有问题"),
-    RECONCILIATION_FINISH(2,"对账有问题处理完毕");
+    RECONCILIATION_SUCCESS(2,"对账完成没有问题"),
+    RECONCILIATION_FINISH(3,"对账有问题处理完毕");
     
     private Integer code;
     

@@ -121,8 +121,6 @@ if (type == 1) then
             if (seat_vo.sellStatus == 3) then
                 return string.format('{"%s": %d}', 'code', 40003)
             end
-            -- 绑定上购票人id
-            -- seat_vo.ticketUserId = ticket_user_id_list[index]
             table.insert(purchase_seat_list,seat_vo)
             -- 入参座位价格累加
             total_seat_dto_price = total_seat_dto_price + seat_dto_price
@@ -144,6 +142,7 @@ if (type == 1) then
                     seat_record.seatId = id
                     seat_record.beforeStatus = seat_vo.sellStatus
                     seat_record.afterStatus = lock_status
+                    -- 绑定上购票人id
                     seat_record.ticketUserId = ticket_user_id_list[seat_index]
                     seat_vo.ticketUserId = ticket_user_id_list[seat_index]
                     table.insert(ticket_category_record.seatRecordList,seat_record)

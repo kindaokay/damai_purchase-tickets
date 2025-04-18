@@ -14,6 +14,9 @@ import java.math.BigDecimal;
 @Data
 @Schema(title="TicketCategoryDetailVo", description ="节目票档详情")
 public class TicketCategoryDetailVo {
+
+    @Schema(name ="id", type ="Long", description ="节目票档id",requiredMode= RequiredMode.REQUIRED)
+    private Long id;
     
     @Schema(name ="programId", type ="Long", description ="节目表id",requiredMode= RequiredMode.REQUIRED)
     private Long programId;

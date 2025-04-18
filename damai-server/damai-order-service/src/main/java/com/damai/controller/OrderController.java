@@ -1,9 +1,15 @@
 package com.damai.controller;
 
 import com.damai.common.ApiResponse;
-import com.damai.domain.ExaminationSimpleResult;
-import com.damai.domain.ExaminationTotalResult;
-import com.damai.dto.*;
+import com.damai.domain.ReconciliationTaskData;
+import com.damai.dto.AccountOrderCountDto;
+import com.damai.dto.OrderCancelDto;
+import com.damai.dto.OrderCreateDto;
+import com.damai.dto.OrderGetDto;
+import com.damai.dto.OrderListDto;
+import com.damai.dto.OrderPayCheckDto;
+import com.damai.dto.OrderPayDto;
+import com.damai.dto.ProgramGetDto;
 import com.damai.service.OrderService;
 import com.damai.service.OrderTaskService;
 import com.damai.vo.AccountOrderCountVo;
@@ -92,21 +98,9 @@ public class OrderController {
         return ApiResponse.ok(orderService.initiateCancel(orderCancelDto));
     }
 
-    @Operation(summary  = "对账数据查询")
-    @PostMapping(value = "/reconciliation/query")
-    public ApiResponse<ExaminationTotalResult> reconciliationQuery(@Valid @RequestBody ProgramGetDto programGetDto) {
-        return ApiResponse.ok(orderTaskService.reconciliationQuery(programGetDto.getId()));
-    }
-
-    @Operation(summary  = "对账数据查询(精简结果)")
-    @PostMapping(value = "/reconciliation/query/simple")
-    public ApiResponse<ExaminationSimpleResult> reconciliationQuerySimple(@Valid @RequestBody ProgramGetDto programGetDto) {
-        return ApiResponse.ok(orderTaskService.reconciliationQuerySimple(programGetDto.getId()));
-    }
-
     @Operation(summary  = "对账任务执行")
     @PostMapping(value = "/reconciliation/task")
-    public ApiResponse<Boolean> reconciliationTask(@Valid @RequestBody ProgramGetDto programGetDto) {
+    public ApiResponse<ReconciliationTaskData> reconciliationTask(@Valid @RequestBody ProgramGetDto programGetDto) {
         return ApiResponse.ok(orderTaskService.reconciliationTask(programGetDto.getId()));
     }
 }
