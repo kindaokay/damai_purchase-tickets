@@ -408,7 +408,6 @@ public class ProgramOrderService {
             latch.countDown();
         },ex -> {
             log.error("创建订单kafka发送消息失败 error",ex);
-            log.error("创建订单失败 需人工处理 orderCreateDto : {}",JSON.toJSONString(orderCreateMq));
             List<SeatVo> purchaseSeatVoList = purchaseSeatList.stream().map(purchaseSeat -> {
                 SeatVo seatVo = new SeatVo();
                 BeanUtils.copyProperties(purchaseSeat,seatVo);

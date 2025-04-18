@@ -4,11 +4,9 @@ import com.damai.common.ApiResponse;
 import com.damai.dto.ReduceRemainNumberDto;
 import com.damai.dto.TicketCategoryListDto;
 import com.damai.vo.TicketCategoryDetailVo;
-import jakarta.validation.Valid;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.stereotype.Component;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 
 import java.util.List;
 
@@ -37,5 +35,12 @@ public interface ProgramClient {
      * @return 结果
      * */
     @PostMapping(value = "/ticket/category/select/list")
-    ApiResponse<List<TicketCategoryDetailVo>> selectList(@Valid @RequestBody TicketCategoryListDto ticketCategoryDto);
+    ApiResponse<List<TicketCategoryDetailVo>> selectList(TicketCategoryListDto ticketCategoryDto);
+    
+    /**
+     * 获取所有节目id集合
+     * @return 结果
+     * */
+    @PostMapping(value = "/program/all/list")
+    ApiResponse<List<Long>> allList();
 }

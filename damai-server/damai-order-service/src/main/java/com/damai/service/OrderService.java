@@ -18,16 +18,36 @@ import com.damai.core.RedisKeyManage;
 import com.damai.domain.OrderCreateDomain;
 import com.damai.domain.OrderCreateMq;
 import com.damai.domain.SeatIdAndTicketUserIdDomain;
-import com.damai.dto.*;
+import com.damai.dto.AccountOrderCountDto;
+import com.damai.dto.NotifyDto;
+import com.damai.dto.OrderCancelDto;
+import com.damai.dto.OrderCreateDto;
+import com.damai.dto.OrderGetDto;
+import com.damai.dto.OrderListDto;
+import com.damai.dto.OrderPayCheckDto;
+import com.damai.dto.OrderPayDto;
+import com.damai.dto.OrderTicketUserCreateDto;
+import com.damai.dto.PayDto;
+import com.damai.dto.ProgramOperateDataDto;
+import com.damai.dto.ReduceRemainNumberDto;
+import com.damai.dto.RefundDto;
+import com.damai.dto.TicketCategoryCountDto;
+import com.damai.dto.TradeCheckDto;
+import com.damai.dto.UserGetAndTicketUserListDto;
 import com.damai.entity.Order;
 import com.damai.entity.OrderTicketUser;
 import com.damai.entity.OrderTicketUserAggregate;
 import com.damai.entity.OrderTicketUserRecord;
-import com.damai.enums.*;
+import com.damai.enums.BaseCode;
+import com.damai.enums.BusinessStatus;
+import com.damai.enums.OrderStatus;
+import com.damai.enums.PayBillStatus;
+import com.damai.enums.PayChannel;
+import com.damai.enums.RecordType;
+import com.damai.enums.SellStatus;
 import com.damai.exception.DaMaiFrameException;
 import com.damai.mapper.OrderMapper;
 import com.damai.mapper.OrderTicketUserMapper;
-import com.damai.mapper.OrderTicketUserRecordMapper;
 import com.damai.redis.RedisCache;
 import com.damai.redis.RedisKeyBuild;
 import com.damai.repeatexecutelimit.annotion.RepeatExecuteLimit;
@@ -39,7 +59,19 @@ import com.damai.servicelock.annotion.ServiceLock;
 import com.damai.util.DateUtils;
 import com.damai.util.ServiceLockTool;
 import com.damai.util.StringUtil;
-import com.damai.vo.*;
+import com.damai.vo.AccountOrderCountVo;
+import com.damai.vo.NotifyVo;
+import com.damai.vo.OrderGetVo;
+import com.damai.vo.OrderListVo;
+import com.damai.vo.OrderPayCheckVo;
+import com.damai.vo.OrderTicketInfoVo;
+import com.damai.vo.SeatVo;
+import com.damai.vo.TicketUserInfoVo;
+import com.damai.vo.TicketUserVo;
+import com.damai.vo.TradeCheckVo;
+import com.damai.vo.UserAndTicketUserInfoVo;
+import com.damai.vo.UserGetAndTicketUserListVo;
+import com.damai.vo.UserInfoVo;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RLock;
@@ -50,13 +82,20 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import static com.damai.constant.Constant.ALIPAY_NOTIFY_SUCCESS_RESULT;
 import static com.damai.constant.Constant.GLIDE_LINE;
-import static com.damai.core.DistributedLockConstants.*;
+import static com.damai.core.DistributedLockConstants.ORDER_CANCEL_LOCK;
+import static com.damai.core.DistributedLockConstants.ORDER_PAY_CHECK;
+import static com.damai.core.DistributedLockConstants.ORDER_PAY_NOTIFY_CHECK;
 import static com.damai.core.RepeatExecuteLimitConstants.CANCEL_PROGRAM_ORDER;
 import static com.damai.core.RepeatExecuteLimitConstants.CREATE_PROGRAM_ORDER_MQ;
 
@@ -111,9 +150,6 @@ public class OrderService extends ServiceImpl<OrderMapper, Order> {
     
     @Autowired
     private ProgramClient programClient;
-    
-    @Autowired
-    private OrderTicketUserRecordMapper orderTicketUserRecordMapper;
 
     @Transactional(rollbackFor = Exception.class)
     public String create(OrderCreateDto orderCreateDto) {
@@ -720,11 +756,6 @@ public class OrderService extends ServiceImpl<OrderMapper, Order> {
         redisCache.set(RedisKeyBuild.createRedisKey(RedisKeyManage.ORDER_MQ,orderNumber),orderNumber,1, TimeUnit.MINUTES);
         return orderNumber;
     }
-    
-//    @RepeatExecuteLimit(name = PROGRAM_CACHE_REVERSE_MQ,keys = {"#programId"})
-//    public void updateProgramRelatedDataMq(Long programId,Map<Long,List<Long>> seatMap,OrderStatus orderStatus){
-//        updateProgramRelatedDataResolution(programId,seatMap,orderStatus);
-//    }
     
     public String getCache(OrderGetDto orderGetDto) {
         return redisCache.get(RedisKeyBuild.createRedisKey(RedisKeyManage.ORDER_MQ,orderGetDto.getOrderNumber()),String.class);

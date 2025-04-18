@@ -350,12 +350,6 @@ public class OrderTaskService {
                 }
             }
             simpleExaminationIdentifierResultList.add(new ExaminationIdentifierResult(identifierId, userId, examinationRecordTypeResultListV2));
-            //            if (CollectionUtil.isNotEmpty(examinationRecordTypeResultListV2)) {
-            //                simpleExaminationIdentifierResultList.add(new ExaminationIdentifierResult(
-            //                        identifierId,
-            //                        userId,
-            //                        examinationRecordTypeResultListV2));
-            //            }
         }
         return simpleExaminationIdentifierResultList;
     }
@@ -381,27 +375,12 @@ public class OrderTaskService {
                 reconciliationSuccessCount++;
                 continue;
             }
-            //根据记录标识和用户id查询数据库中的订单列表
-            //            List<Order> orderList = orderMapper.selectList(Wrappers.lambdaQuery(Order.class)
-            //                            .eq(Order::getIdentifierId, Long.parseLong(identifierId)).eq(Order::getUserId, Long.parseLong(userId)));
-            //            Map<String, List<OrderTicketUserRecord>> orderTicketUserRecordMap = new HashMap<>(64);
-            //            if (CollectionUtil.isNotEmpty(orderList)) {
-            //                //再根据订单号查询购票人记录
-            //                List<OrderTicketUserRecord> orderTicketUserRecordList = orderTicketUserRecordMapper.selectList(Wrappers.lambdaQuery(OrderTicketUserRecord.class)
-            //                        .in(OrderTicketUserRecord::getOrderNumber, orderList.stream().map(Order::getOrderNumber).collect(Collectors.toList()))
-            //                        .eq(OrderTicketUserRecord::getReconciliationStatus, ReconciliationStatus.RECONCILIATION_NO.getCode()));
-            //                //转成map，key：记录类型_记录标识_用户id。value：购票人订单记录集合
-            //                orderTicketUserRecordMap =
-            //                        orderTicketUserRecordList.stream().collect(Collectors.groupingBy(record ->
-            //                                record.getRecordTypeValue() + GLIDE_LINE + record.getIdentifierId() + GLIDE_LINE + record.getUserId()));
-            //            }
             List<ProgramRecord> programRecordList = new ArrayList<>();
             for (ExaminationRecordTypeResult examinationRecordTypeResult : examinationRecordTypeResultList) {
                 ProgramRecord programRecord = new ProgramRecord();
                 Integer recordTypeCode = examinationRecordTypeResult.getRecordTypeCode();
                 String recordTypeValue = examinationRecordTypeResult.getRecordTypeValue();
                 ExaminationSeatResult examinationSeatResult = examinationRecordTypeResult.getExaminationSeatResult();
-                
                 List<SeatRecord> seatRecordAllList = new ArrayList<>();
                 //需要向redis中补充的数据
                 List<OrderTicketUserRecord> needToRedisSeatRecordList = examinationSeatResult.getNeedToRedisSeatRecordList();

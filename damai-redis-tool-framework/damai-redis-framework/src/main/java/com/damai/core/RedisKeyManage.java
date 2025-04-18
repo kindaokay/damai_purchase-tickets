@@ -89,6 +89,8 @@ public enum RedisKeyManage {
     
     ORDER_MQ("d_mai_order_mq_%s","使用mq创建的订单的订单编号","使用mq创建的订单的订单编号","k"),
     
+    DISCARD_ORDER("d_mai_discard_order_%s","使用mq创建方式被丢弃的订单","使用mq创建方式被丢弃的订单","k"),
+    
     LOGIN_USER_MOBILE_ERROR("d_mai_login_user_mobile_error_%s","登录错误的用户手机号key","登录错误的用户手机号次数","k"),
     
     LOGIN_USER_EMAIL_ERROR("d_mai_login_user_email_error_%s","登录错误的用户邮箱key","登录错误的用户邮箱次数","k"),

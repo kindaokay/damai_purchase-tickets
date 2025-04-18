@@ -26,4 +26,9 @@ public class ProgramClientFallback implements ProgramClient {
     public ApiResponse<List<TicketCategoryDetailVo>> selectList(final TicketCategoryListDto ticketCategoryDto) {
         return ApiResponse.error(BaseCode.SYSTEM_ERROR);
     }
+    
+    @Override
+    public ApiResponse<List<Long>> allList() {
+        return ApiResponse.error(BaseCode.SYSTEM_ERROR);
+    }
 }
