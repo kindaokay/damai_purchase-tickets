@@ -69,7 +69,17 @@ rules:
         tableStrategy:
           standard:
             shardingColumn: program_id
-            shardingAlgorithmName: tableTicketCategoryModModel      
+            shardingAlgorithmName: tableTicketCategoryModModel
+      d_program_record_task:
+        actualDataNodes: ds_${0..1}.d_program_record_task_${0..1}
+        databaseStrategy:
+          standard:
+            shardingColumn: create_time
+            shardingAlgorithmName: databaseProgramRecordTaskModModel
+        tableStrategy:
+          standard:
+            shardingColumn: create_time
+            shardingAlgorithmName: tableProgramRecordTaskModModel
     broadcastTables:
       - d_program_category
     shardingAlgorithms:
@@ -112,6 +122,14 @@ rules:
       tableTicketCategoryModModel:
         type: MOD
         props:
-          sharding-count: 2    
+          sharding-count: 2
+      databaseProgramRecordTaskModModel:
+        type: HASH_MOD
+        props:
+          sharding-count: 2
+      tableProgramRecordTaskModModel:
+        type: HASH_MOD
+        props:
+          sharding-count: 2
 props:
   sql-show: true

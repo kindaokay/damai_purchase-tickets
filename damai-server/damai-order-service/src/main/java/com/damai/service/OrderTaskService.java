@@ -341,11 +341,9 @@ public class OrderTaskService {
             List<ExaminationRecordTypeResult> examinationRecordTypeResultListV2 = new ArrayList<>();
             for (ExaminationRecordTypeResult examinationRecordTypeResult : examinationRecordTypeResultList) {
                 ExaminationSeatResult examinationSeatResult = examinationRecordTypeResult.getExaminationSeatResult();
-                //需要向数据库中补充的座位
-                List<SeatRecord> needToDbSeatRecordList = examinationSeatResult.getNeedToDbSeatRecordList();
                 //需要向redis中补充的座位
                 List<OrderTicketUserRecord> needToRedisSeatRecordList = examinationSeatResult.getNeedToRedisSeatRecordList();
-                if (CollectionUtil.isNotEmpty(needToDbSeatRecordList) || CollectionUtil.isNotEmpty(needToRedisSeatRecordList)) {
+                if (CollectionUtil.isNotEmpty(needToRedisSeatRecordList)) {
                     examinationRecordTypeResultListV2.add(examinationRecordTypeResult);
                 }
             }

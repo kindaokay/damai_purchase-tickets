@@ -86,7 +86,7 @@ public class OrderTicketUserRecord extends BaseTableData implements Serializable
     private String recordTypeValue;
 
     /**
-     * 对账状态 1:未对账 -1:对账完成有问题 1:对账完成没有问题 2:对账有问题处理完毕
+     * 对账状态 1:未对账 -1:对账完成有问题 2:对账完成没有问题 3:对账有问题处理完毕
      */
     private Integer reconciliationStatus;
     

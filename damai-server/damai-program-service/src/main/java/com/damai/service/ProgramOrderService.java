@@ -5,18 +5,25 @@ import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.baidu.fsg.uid.UidGenerator;
+import com.damai.BusinessThreadPool;
 import com.damai.client.OrderClient;
 import com.damai.common.ApiResponse;
 import com.damai.core.RedisKeyManage;
 import com.damai.domain.OrderCreateMq;
 import com.damai.domain.PurchaseSeat;
-import com.damai.dto.*;
+import com.damai.dto.DelayOrderCancelDto;
+import com.damai.dto.OrderCreateDto;
+import com.damai.dto.OrderTicketUserCreateDto;
+import com.damai.dto.ProgramOrderCreateDto;
+import com.damai.dto.SeatDto;
+import com.damai.entity.ProgramRecordTask;
 import com.damai.entity.ProgramShowTime;
 import com.damai.enums.BaseCode;
 import com.damai.enums.OrderStatus;
 import com.damai.enums.RecordType;
 import com.damai.enums.SellStatus;
 import com.damai.exception.DaMaiFrameException;
+import com.damai.mapper.ProgramRecordTaskMapper;
 import com.damai.redis.RedisKeyBuild;
 import com.damai.service.delaysend.DelayOrderCancelSend;
 import com.damai.service.domain.CreateOrderTemporaryData;
@@ -36,8 +43,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -83,6 +96,9 @@ public class ProgramOrderService {
     
     @Autowired
     private SeatService seatService;
+    
+    @Autowired
+    private ProgramRecordTaskMapper programRecordTaskMapper;
     
     public List<TicketCategoryVo> getTicketCategoryList(ProgramOrderCreateDto programOrderCreateDto, Date showTime){
         List<TicketCategoryVo> getTicketCategoryVoList = new ArrayList<>();
@@ -304,13 +320,24 @@ public class ProgramOrderService {
         OrderCreateMq orderCreateMq = new OrderCreateMq();
         BeanUtils.copyProperties(orderCreateDto,orderCreateMq);
         orderCreateMq.setIdentifierId(createOrderTemporaryData.getIdentifierId());
+        //插入节目记录任务
+        BusinessThreadPool.execute(() -> createProgramRecordTask(orderCreateMq.getProgramId()));
+        //创建订单
         String orderNumber = createOrderByMq(orderCreateMq,createOrderTemporaryData.getPurchaseSeatList());
-        
         DelayOrderCancelDto delayOrderCancelDto = new DelayOrderCancelDto();
         delayOrderCancelDto.setOrderNumber(orderCreateDto.getOrderNumber());
         delayOrderCancelSend.sendMessage(JSON.toJSONString(delayOrderCancelDto));
         
         return orderNumber;
+    }
+    
+    public void createProgramRecordTask(Long programId){
+        ProgramRecordTask programRecordTask = new ProgramRecordTask();
+        programRecordTask.setId(uidGenerator.getUid());
+        programRecordTask.setProgramId(programId);
+        programRecordTask.setCreateTime(DateUtils.now());
+        programRecordTask.setEditTime(DateUtils.now());
+        programRecordTaskMapper.insert(programRecordTask);
     }
     
     private OrderCreateDto buildCreateOrderParam(ProgramOrderCreateDto programOrderCreateDto,List<SeatVo> purchaseSeatList){

@@ -1,9 +1,12 @@
 package com.damai.client;
 
 import com.damai.common.ApiResponse;
+import com.damai.dto.ProgramRecordTaskListDto;
+import com.damai.dto.ProgramRecordTaskUpdateDto;
 import com.damai.dto.ReduceRemainNumberDto;
 import com.damai.dto.TicketCategoryListDto;
 import com.damai.enums.BaseCode;
+import com.damai.vo.ProgramRecordTaskVo;
 import com.damai.vo.TicketCategoryDetailVo;
 import org.springframework.stereotype.Component;
 
@@ -29,6 +32,16 @@ public class ProgramClientFallback implements ProgramClient {
     
     @Override
     public ApiResponse<List<Long>> allList() {
+        return ApiResponse.error(BaseCode.SYSTEM_ERROR);
+    }
+    
+    @Override
+    public ApiResponse<List<ProgramRecordTaskVo>> select(final ProgramRecordTaskListDto programRecordTaskListDto) {
+        return ApiResponse.error(BaseCode.SYSTEM_ERROR);
+    }
+    
+    @Override
+    public ApiResponse<Integer> update(final ProgramRecordTaskUpdateDto programRecordTaskUpdateDto) {
         return ApiResponse.error(BaseCode.SYSTEM_ERROR);
     }
 }
