@@ -92,6 +92,9 @@ public class OrderTaskService {
     
     /**
      * 对账查询，得到的redis为主和数据库为主的对比结果还并没有优化合并
+     * 
+     * @param programId 节目id
+     * @param programRecordMap redis中的节目记录
      */
     public ExaminationTotalResult reconciliationQuery(Long programId, Map<String, String> programRecordMap) {
         //以redis为标准的对账
@@ -100,7 +103,10 @@ public class OrderTaskService {
         List<ExaminationIdentifierResult> examinationIdentifierResultDbStandardList = reconciliationDbStandard(programId, programRecordMap);
         return new ExaminationTotalResult(programId, examinationIdentifierResultRedisStandardList, examinationIdentifierResultDbStandardList);
     }
-    
+    /**
+     * @param programId 节目id
+     * @param programRecordMap redis中的节目记录
+     * */
     public List<ExaminationIdentifierResult> reconciliationRedisStandard(Long programId, Map<String, String> programRecordMap) {
         //redis和数据对账结果(节目维度)
         List<ExaminationIdentifierResult> examinationIdentifierResultList = new ArrayList<>();
@@ -108,8 +114,7 @@ public class OrderTaskService {
         if (CollectionUtil.isEmpty(programRecordMap)) {
             return examinationIdentifierResultList;
         }
-        //key：记录标识_用户id
-        //value：记录类型的集合
+        //key：记录标识_用户id  value：记录类型的集合
         Map<String, List<String>> identifierIdAndUserIdMap = regroup(programRecordMap);
         for (Map.Entry<String, List<String>> identifierIdAndUserIdEntry : identifierIdAndUserIdMap.entrySet()) {
             String[] split = SplitUtil.toSplit(identifierIdAndUserIdEntry.getKey());
@@ -122,47 +127,62 @@ public class OrderTaskService {
             String userId = split[1];
             //redis中记录类型集合
             List<String> redisRecordTypeList = identifierIdAndUserIdEntry.getValue();
-            //购票人订单记录中的座位
+            //购票人订单记录中的座位 key:记录类型 value：此记录类型下的购票人订单记录集合
             Map<Integer, List<OrderTicketUserRecord>> orderTicketUserRecordMap = new HashMap<>(64);
             //查询订单
-            Order order = orderMapper.selectOne(Wrappers.lambdaQuery(Order.class).eq(Order::getReconciliationStatus, ReconciliationStatus.RECONCILIATION_NO.getCode()).eq(Order::getProgramId, programId).eq(Order::getUserId, Long.parseLong(userId)).eq(Order::getIdentifierId, Long.parseLong(identifierId)));
+            Order order = orderMapper.selectOne(Wrappers.lambdaQuery(Order.class)
+                    .eq(Order::getReconciliationStatus, ReconciliationStatus.RECONCILIATION_NO.getCode())
+                    .eq(Order::getProgramId, programId).eq(Order::getUserId, Long.parseLong(userId))
+                    .eq(Order::getIdentifierId, Long.parseLong(identifierId)));
             if (Objects.nonNull(order)) {
                 //根据订单编号查询购票人订单记录
-                List<OrderTicketUserRecord> orderTicketUserRecordList = orderTicketUserRecordService.list(Wrappers.lambdaQuery(OrderTicketUserRecord.class).eq(OrderTicketUserRecord::getOrderNumber, order.getOrderNumber()));
+                List<OrderTicketUserRecord> orderTicketUserRecordList = 
+                        orderTicketUserRecordService.list(Wrappers.lambdaQuery(OrderTicketUserRecord.class)
+                                .eq(OrderTicketUserRecord::getOrderNumber, order.getOrderNumber()));
                 if (CollectionUtil.isNotEmpty(orderTicketUserRecordList)) {
                     //购票人订单记录中的座位
-                    orderTicketUserRecordMap = orderTicketUserRecordList.stream().collect(Collectors.groupingBy(OrderTicketUserRecord::getRecordTypeCode));
+                    orderTicketUserRecordMap = orderTicketUserRecordList.stream()
+                            .collect(Collectors.groupingBy(OrderTicketUserRecord::getRecordTypeCode));
                 }
             }
             List<ExaminationRecordTypeResult> examinationRecordTypeResultList = new ArrayList<>();
             for (String redisRecordType : redisRecordTypeList) {
                 //根据记录类型获取对应的购票人订单记录中的座位
                 List<OrderTicketUserRecord> dbOrderTicketUserRecordList = orderTicketUserRecordMap.get(RecordType.getCodeByValue(redisRecordType));
-                ExaminationRecordTypeResult examinationRecordTypeResult = executeRedisAndDbExamination(programRecordMap, dbOrderTicketUserRecordList, redisRecordType, identifierId, userId);
+                ExaminationRecordTypeResult examinationRecordTypeResult = 
+                        executeRedisAndDbExamination(programRecordMap, dbOrderTicketUserRecordList, redisRecordType, identifierId, userId);
                 examinationRecordTypeResultList.add(examinationRecordTypeResult);
             }
             //redis和数据对账结果(记录标识维度)
-            ExaminationIdentifierResult examinationIdentifierResult = new ExaminationIdentifierResult(identifierId, userId, examinationRecordTypeResultList);
+            ExaminationIdentifierResult examinationIdentifierResult = 
+                    new ExaminationIdentifierResult(identifierId, userId, examinationRecordTypeResultList);
             examinationIdentifierResultList.add(examinationIdentifierResult);
         }
         return examinationIdentifierResultList;
     }
-    
+    /**
+     * @param programId 节目id
+     * @param programRecordMap redis中的节目记录
+     * */
     public List<ExaminationIdentifierResult> reconciliationDbStandard(Long programId, Map<String, String> programRecordMap) {
         //redis和数据对账结果(节目维度)
         List<ExaminationIdentifierResult> examinationIdentifierResultList = new ArrayList<>();
         //查询订单
-        List<Order> orderList = orderMapper.selectList(Wrappers.lambdaQuery(Order.class).eq(Order::getReconciliationStatus, ReconciliationStatus.RECONCILIATION_NO.getCode()).eq(Order::getProgramId, programId));
+        List<Order> orderList = 
+                orderMapper.selectList(Wrappers.lambdaQuery(Order.class)
+                        .eq(Order::getReconciliationStatus, ReconciliationStatus.RECONCILIATION_NO.getCode())
+                        .eq(Order::getProgramId, programId));
         if (CollectionUtil.isEmpty(orderList)) {
             return examinationIdentifierResultList;
         }
         //购票人订单记录中的座位
-        List<OrderTicketUserRecord> orderTicketUserRecordList = orderTicketUserRecordMapper.selectList(Wrappers.lambdaQuery(OrderTicketUserRecord.class).in(OrderTicketUserRecord::getOrderNumber, orderList.stream().map(Order::getOrderNumber).collect(Collectors.toList())).eq(OrderTicketUserRecord::getReconciliationStatus, ReconciliationStatus.RECONCILIATION_NO.getCode()));
-        //key：记录类型_记录标识_用户id。例如：orderTicketUserRecordList
-        //value：购票人订单记录
+        List<OrderTicketUserRecord> orderTicketUserRecordList = 
+                orderTicketUserRecordMapper.selectList(Wrappers.lambdaQuery(OrderTicketUserRecord.class)
+                        .in(OrderTicketUserRecord::getOrderNumber, orderList.stream().map(Order::getOrderNumber)
+                                .collect(Collectors.toList())).eq(OrderTicketUserRecord::getReconciliationStatus, ReconciliationStatus.RECONCILIATION_NO.getCode()));
+        //key：记录类型_记录标识_用户id  value：购票人订单记录
         Map<String, List<OrderTicketUserRecord>> orderTicketUserRecordMap = orderTicketUserRecordList.stream().collect(Collectors.groupingBy(record -> record.getRecordTypeValue() + GLIDE_LINE + record.getIdentifierId() + GLIDE_LINE + record.getUserId()));
-        //key：记录标识_用户id
-        //value：记录类型的集合
+        //key：记录标识_用户id  value：记录类型的集合
         Map<String, List<String>> identifierIdAndUserIdMap = regroup(orderTicketUserRecordMap);
         for (Map.Entry<String, List<String>> identifierIdAndUserIdEntry : identifierIdAndUserIdMap.entrySet()) {
             String[] split = SplitUtil.toSplit(identifierIdAndUserIdEntry.getKey());
@@ -208,7 +228,16 @@ public class OrderTaskService {
         return resultMap;
     }
     
-    public ExaminationRecordTypeResult executeRedisAndDbExamination(Map<String, String> programRecordMap, List<OrderTicketUserRecord> dbOrderTicketUserRecordList, String dbRecordType, String identifierId, String userId) {
+    /**
+     * @param programRecordMap redis中的节目记录
+     * @param dbOrderTicketUserRecordList 购票人订单记录中的座位
+     * @param dbRecordType 记录类型
+     * @param identifierId 标识id
+     * @param userId 用户id
+     * */
+    public ExaminationRecordTypeResult executeRedisAndDbExamination(Map<String, String> programRecordMap, 
+                                                                    List<OrderTicketUserRecord> dbOrderTicketUserRecordList, 
+                                                                    String dbRecordType, String identifierId, String userId) {
         ProgramRecord programRecord = JSON.parseObject(programRecordMap.get(dbRecordType + GLIDE_LINE + identifierId + GLIDE_LINE + userId), ProgramRecord.class);
         //如果数据库和redis都没有这条记录的话
         if (CollectionUtil.isEmpty(dbOrderTicketUserRecordList) && Objects.isNull(programRecord)) {
@@ -250,7 +279,10 @@ public class OrderTaskService {
         //redis记录中的座位转成Map，key：座位id，value：SeatRecord
         return seatRecordList.stream().collect(Collectors.toMap(SeatRecord::getSeatId, seatRecord -> seatRecord, (v1, v2) -> v2));
     }
-    
+    /**
+     * @param redisSeatRecordMap redis记录中的座位转成Map，key：座位id，value：SeatRecord
+     * @param dbOrderTicketUserRecordMap 数据库中购票人订单记录中的座位转成Map，key：座位id，value：OrderTicketUserRecord
+     * */
     public ExaminationSeatResult executeExaminationSeat(Map<Long, SeatRecord> redisSeatRecordMap, Map<Long, OrderTicketUserRecord> dbOrderTicketUserRecordMap) {
         //以redis为准的座位记录统计数量
         int redisStandardStatisticCount = 0;
@@ -518,8 +550,6 @@ public class OrderTaskService {
     }
     
     public Map<String, ProgramRecord> addRedisRecord(Long programId, Map<String, List<ProgramRecord>> needToRedisRecordMap, Map<String, String> programRecordMap) {
-        Set<Long> ticketCategoryIdSet = getTicketCategoryIdSet(needToRedisRecordMap);
-        
         //构建出要向redis添加记录的结构 使用LinkedHashMap保证插入的顺序
         //key：记录类型_记录标识_用户id value：ProgramRecord
         Map<String, ProgramRecord> completeRedisCordMap = new LinkedHashMap<>(64);
@@ -531,13 +561,7 @@ public class OrderTaskService {
                 completeRedisCordMap.put(programRecord.getRecordType() + GLIDE_LINE + key, programRecord);
             }
         }
-        //        for (Long ticketCategoryId : ticketCategoryIdSet) {
-        //            //删除redis中的座位
-        //            seatHandler.delRedisSeatData(programId, ticketCategoryId);
-        //            //删除redis中的余票数量
-        //            ticketRemainNumberHandler.delRedisSeatData(programId, ticketCategoryId);
-        //        }
-        //        //向redis中添加记录
+        //向redis中添加记录
         programRecordHandler.add(0, programId, completeRedisCordMap, programRecordMap);
         return completeRedisCordMap;
     }

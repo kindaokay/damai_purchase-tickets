@@ -639,6 +639,7 @@ public class ProgramService extends ServiceImpl<ProgramMapper, Program> {
                 Wrappers.lambdaQuery(Seat.class)
                         .eq(Seat::getProgramId,reduceRemainNumberDto.getProgramId())
                         .in(Seat::getId, seatIdList);
+        //查询座位，进行相关验证
         List<Seat> seatList = seatMapper.selectList(seatLambdaQueryWrapper);
         if (CollectionUtil.isEmpty(seatList)) {
             throw new DaMaiFrameException(BaseCode.SEAT_NOT_EXIST);
@@ -651,6 +652,7 @@ public class ProgramService extends ServiceImpl<ProgramMapper, Program> {
                 throw new DaMaiFrameException(BaseCode.SEAT_IS_NOT_NOT_SOLD);
             }
         }
+        //修改座位状态
         LambdaUpdateWrapper<Seat> seatLambdaUpdateWrapper = 
                 Wrappers.lambdaUpdate(Seat.class)
                         .eq(Seat::getProgramId,reduceRemainNumberDto.getProgramId())
@@ -661,6 +663,7 @@ public class ProgramService extends ServiceImpl<ProgramMapper, Program> {
         
         int updateRemainNumberCount = 0;
         for (TicketCategoryCountDto ticketCategoryCountDto : ticketCategoryCountDtoList) {
+            //修改余票
             updateRemainNumberCount = updateRemainNumberCount + ticketCategoryMapper.reduceRemainNumber(
                     ticketCategoryCountDto.getCount(), ticketCategoryCountDto.getTicketCategoryId(),
                     reduceRemainNumberDto.getProgramId());

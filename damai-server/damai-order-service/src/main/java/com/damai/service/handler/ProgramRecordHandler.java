@@ -7,7 +7,9 @@ import com.damai.domain.ProgramRecord;
 import com.damai.entity.Order;
 import com.damai.entity.OrderTicketUser;
 import com.damai.entity.OrderTicketUserRecord;
+import com.damai.enums.BaseCode;
 import com.damai.enums.ReconciliationStatus;
+import com.damai.exception.DaMaiFrameException;
 import com.damai.mapper.OrderMapper;
 import com.damai.mapper.OrderTicketUserMapper;
 import com.damai.mapper.OrderTicketUserRecordMapper;
@@ -56,7 +58,7 @@ public class ProgramRecordHandler {
         int maxRetryCount = 5;
         if (retryCount > maxRetryCount) {
             log.error("添加记录流水失败超过最大重试次数,retryCount:{} programId:{}, completeRedisCordMap:{}, totalProgramRecordMap:{}", retryCount,programId, completeRedisCordMap, totalProgramRecordMap);
-            return;
+            throw new DaMaiFrameException(BaseCode.MAX_RETRY_COUNT);
         }
         try {
             Set<String> keyList = new HashSet<>();
@@ -70,10 +72,14 @@ public class ProgramRecordHandler {
                 int result = updateDbOrderTicketUserRecordStatus(programId, identifierId, userId, ReconciliationStatus.RECONCILIATION_SUCCESS);
                 log.info("修改数据库记录流水成功, programId:{}, identifierId:{}, userId:{}, result:{}", programId, identifierId, userId, result);
             }
-            //从旧地记录中删除
-            redisCache.delForHash(RedisKeyBuild.createRedisKey(RedisKeyManage.PROGRAM_RECORD, programId),totalProgramRecordMap.keySet());
-            //目前所有的记录添加到完成的记录中 key：记录类型_记录标识_用户id value：记录标识
-            redisCache.putHash(RedisKeyBuild.createRedisKey(RedisKeyManage.PROGRAM_RECORD_FINISH, programId), totalProgramRecordMap);
+            if (CollectionUtil.isNotEmpty(totalProgramRecordMap)) {
+                //从旧地记录中删除
+                redisCache.delForHash(RedisKeyBuild.createRedisKey(RedisKeyManage.PROGRAM_RECORD, programId),totalProgramRecordMap.keySet());
+            }
+            if (CollectionUtil.isNotEmpty(totalProgramRecordMap)) {
+                //目前所有的记录添加到完成的记录中 key：记录类型_记录标识_用户id value：记录标识
+                redisCache.putHash(RedisKeyBuild.createRedisKey(RedisKeyManage.PROGRAM_RECORD_FINISH, programId), totalProgramRecordMap);
+            }
             if (CollectionUtil.isNotEmpty(completeRedisCordMap)) {
                 //将新补充的记录添加到redis对比完成的记录中
                 redisCache.putHash(RedisKeyBuild.createRedisKey(RedisKeyManage.PROGRAM_RECORD_FINISH, programId), completeRedisCordMap);

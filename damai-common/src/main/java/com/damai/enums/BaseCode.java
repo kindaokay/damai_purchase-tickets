@@ -253,6 +253,8 @@ public enum BaseCode {
     USER_EMAIL_NOT_EXIST(70002,"用户邮箱不存在"),
     
     NOT_FOUND_GENE(70003,"没有找到基因"),
+    
+    MAX_RETRY_COUNT(70004,"添加记录流水失败超过最大重试次数")
     ;
     
     private final Integer code;
