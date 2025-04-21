@@ -42,7 +42,6 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -443,6 +442,7 @@ public class OrderTaskService {
                     ticketCategoryRecord.setSeatRecordList(seatRecordList);
                     ticketCategoryRecordList.add(ticketCategoryRecord);
                 }
+                //构建redis的操作记录
                 programRecord.setRecordType(recordTypeValue);
                 programRecord.setTimestamp(System.currentTimeMillis());
                 programRecord.setTicketCategoryRecordList(ticketCategoryRecordList);
@@ -461,7 +461,14 @@ public class OrderTaskService {
         return null;
     }
     
-    public Map<String, ProgramRecord> compensateRedisRecord(Long programId, Map<String, List<ProgramRecord>> needToRedisRecordMap, Map<String, String> programRecordMap) {
+    /**
+     * @param programId 节目id
+     * @param needToRedisRecordMap 记录标识_用户id   value：有顺序的ProgramRecord集合，顺序为reduce、changeStatus、increase
+     * @param programRecordMap 查询redis中的节目记录
+     * */
+    public Map<String, ProgramRecord> compensateRedisRecord(Long programId, 
+                                                            Map<String, List<ProgramRecord>> needToRedisRecordMap, 
+                                                            Map<String, String> programRecordMap) {
         //需要补充的票档id集合
         Set<Long> ticketCategoryIdSet = getTicketCategoryIdSet(needToRedisRecordMap);
         //获取节目票档集合
@@ -489,10 +496,10 @@ public class OrderTaskService {
     /**
      * 逆向还原单笔订单的所有 ProgramRecord
      *
-     * @param programRecords 按时间正序（最早到最新）排列的记录列表
+     * @param programRecords 按时间正序（最早到最新）排列的记录列表，顺序为reduce、changeStatus、increase
      * @param ticketCategoryRemainNumberMap key：ticketCategoryId，value：当前（最新）剩余票数；会被本方法原地回退
      */
-    public static void restoreSingleOrder(List<ProgramRecord> programRecords, Map<Long, Long> ticketCategoryRemainNumberMap) {
+    public void restoreSingleOrder(List<ProgramRecord> programRecords, Map<Long, Long> ticketCategoryRemainNumberMap) {
         
         //1. 把“从最早到最新”的列表倒过来，最新地记录先还原
         Collections.reverse(programRecords);
@@ -550,9 +557,10 @@ public class OrderTaskService {
     }
     
     public Map<String, ProgramRecord> addRedisRecord(Long programId, Map<String, List<ProgramRecord>> needToRedisRecordMap, Map<String, String> programRecordMap) {
-        //构建出要向redis添加记录的结构 使用LinkedHashMap保证插入的顺序
+        Set<Long> ticketCategoryIdSet = getTicketCategoryIdSet(needToRedisRecordMap);
+        //构建出要向redis添加记录的结构
         //key：记录类型_记录标识_用户id value：ProgramRecord
-        Map<String, ProgramRecord> completeRedisCordMap = new LinkedHashMap<>(64);
+        Map<String, ProgramRecord> completeRedisCordMap = new HashMap<>(64);
         //key：记录标识_用户id value：有顺序的ProgramRecord集合，顺序为reduce、changeStatus、increase
         for (Map.Entry<String, List<ProgramRecord>> redisRecordEntry : needToRedisRecordMap.entrySet()) {
             String key = redisRecordEntry.getKey();
@@ -560,6 +568,12 @@ public class OrderTaskService {
             for (ProgramRecord programRecord : programRecordList) {
                 completeRedisCordMap.put(programRecord.getRecordType() + GLIDE_LINE + key, programRecord);
             }
+        }
+        for (Long ticketCategoryId : ticketCategoryIdSet) {
+            //删除redis中的座位
+            seatHandler.delRedisSeatData(programId, ticketCategoryId);
+            //删除redis中的余票数量
+            ticketRemainNumberHandler.delRedisSeatData(programId, ticketCategoryId);
         }
         //向redis中添加记录
         programRecordHandler.add(0, programId, completeRedisCordMap, programRecordMap);
