@@ -1,6 +1,7 @@
 package com.damai.controller;
 
 import com.damai.common.ApiResponse;
+import com.damai.dto.ProgramRecordTaskAddDto;
 import com.damai.dto.ProgramRecordTaskListDto;
 import com.damai.dto.ProgramRecordTaskUpdateDto;
 import com.damai.service.ProgramRecordTaskService;
@@ -40,5 +41,11 @@ public class ProgramRecordTaskController {
     @PostMapping(value = "/update")
     public ApiResponse<Integer> update(@Valid @RequestBody ProgramRecordTaskUpdateDto programRecordTaskUpdateDto) {
         return ApiResponse.ok(programRecordTaskService.updateByCreateTime(programRecordTaskUpdateDto));
+    }
+    
+    @Operation(summary  = "添加节目对账记录任务")
+    @PostMapping(value = "/add")
+    public ApiResponse<Integer> add(@Valid @RequestBody ProgramRecordTaskAddDto orderTicketUserRecordAddDto) {
+        return ApiResponse.ok(programRecordTaskService.add(orderTicketUserRecordAddDto));
     }
 }

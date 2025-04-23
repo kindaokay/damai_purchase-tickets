@@ -5,6 +5,7 @@ import com.damai.domain.ReconciliationTaskData;
 import com.damai.dto.AccountOrderCountDto;
 import com.damai.dto.OrderCancelDto;
 import com.damai.dto.OrderCreateDto;
+import com.damai.dto.OrderCreateTestDto;
 import com.damai.dto.OrderGetDto;
 import com.damai.dto.OrderListDto;
 import com.damai.dto.OrderPayCheckDto;
@@ -113,5 +114,17 @@ public class OrderController {
     public ApiResponse<ReconciliationTaskData> reconciliationTaskAll() {
         reconciliationTask.reconciliationTask();
         return ApiResponse.ok();
+    }
+    
+    @Operation(summary  = "测试")
+    @PostMapping(value = "/test")
+    public ApiResponse<Boolean> test(@Valid @RequestBody OrderCreateTestDto orderCreateTestDto) {
+        return ApiResponse.ok(orderService.test(orderCreateTestDto));
+    }
+    
+    @Operation(summary  = "测试")
+    @PostMapping(value = "/test/v2")
+    public ApiResponse<Boolean> testV2(@Valid @RequestBody OrderCreateTestDto orderCreateTestDto) {
+        return ApiResponse.ok(orderService.testV2(orderCreateTestDto));
     }
 }

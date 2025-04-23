@@ -2,11 +2,13 @@ package com.damai.service;
 
 import cn.hutool.core.collection.CollUtil;
 import com.alibaba.fastjson.JSON;
+import com.baidu.fsg.uid.UidGenerator;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.damai.core.RepeatExecuteLimitConstants;
+import com.damai.dto.AddApiDataDto;
 import com.damai.util.StringUtil;
 import com.damai.dto.ApiDataDto;
 import com.damai.entity.ApiData;
@@ -34,6 +36,9 @@ public class ApiDataService extends ServiceImpl<ApiDataMapper,ApiData> {
 
     @Autowired
     private ApiDataMapper apiDataMapper;
+    
+    @Autowired
+    private UidGenerator uidGenerator;
     
     @RepeatExecuteLimit(name = RepeatExecuteLimitConstants.CONSUMER_API_DATA_MESSAGE,keys = {"#apiData.id"})
     public void saveApiData(ApiData apiData){
@@ -65,5 +70,13 @@ public class ApiDataService extends ServiceImpl<ApiDataMapper,ApiData> {
         }
         apiDataPageVo.setRecords(apiDataVoList);
         return apiDataPageVo;
+    }
+    
+    public Boolean add(final AddApiDataDto dto) {
+        ApiData apiData = new ApiData();
+        BeanUtils.copyProperties(dto, apiData);
+        apiData.setId(uidGenerator.getUid());
+        apiDataMapper.insert(apiData);
+        return true;
     }
 }

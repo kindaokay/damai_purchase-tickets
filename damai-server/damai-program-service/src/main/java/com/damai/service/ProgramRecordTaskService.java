@@ -1,12 +1,15 @@
 package com.damai.service;
 
 
+import com.baidu.fsg.uid.UidGenerator;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.damai.dto.ProgramRecordTaskAddDto;
 import com.damai.dto.ProgramRecordTaskListDto;
 import com.damai.dto.ProgramRecordTaskUpdateDto;
 import com.damai.entity.ProgramRecordTask;
 import com.damai.mapper.ProgramRecordTaskMapper;
+import com.damai.util.DateUtils;
 import com.damai.vo.ProgramRecordTaskVo;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,6 +26,8 @@ import java.util.List;
 @Service
 public class ProgramRecordTaskService extends ServiceImpl<ProgramRecordTaskMapper, ProgramRecordTask> {
     
+    @Autowired
+    private UidGenerator uidGenerator;
     
     @Autowired
     private ProgramRecordTaskMapper programRecordTaskMapper;
@@ -48,5 +53,15 @@ public class ProgramRecordTaskService extends ServiceImpl<ProgramRecordTaskMappe
                         .eq(ProgramRecordTask::getHandleStatus, programRecordTaskUpdateDto.getBeforeHandleStatus())
                         .in(ProgramRecordTask::getCreateTime, programRecordTaskUpdateDto.getCreateTimeSet()));
         
+    }
+    
+    @Transactional(rollbackFor = Exception.class)
+    public Integer add(ProgramRecordTaskAddDto orderTicketUserRecordAddDto){
+        ProgramRecordTask programRecordTask = new ProgramRecordTask();
+        programRecordTask.setId(uidGenerator.getUid());
+        programRecordTask.setProgramId(orderTicketUserRecordAddDto.getProgramId());
+        programRecordTask.setCreateTime(DateUtils.now());
+        programRecordTask.setEditTime(DateUtils.now());
+        return programRecordTaskMapper.insert(programRecordTask);
     }
 }

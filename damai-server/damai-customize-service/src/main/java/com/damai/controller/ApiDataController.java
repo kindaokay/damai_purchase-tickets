@@ -2,6 +2,7 @@ package com.damai.controller;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.damai.common.ApiResponse;
+import com.damai.dto.AddApiDataDto;
 import com.damai.dto.ApiDataDto;
 import com.damai.service.ApiDataService;
 import com.damai.vo.ApiDataVo;
@@ -31,5 +32,10 @@ public class ApiDataController {
     @RequestMapping(value = "/pageList",method = RequestMethod.POST)
     public ApiResponse<Page<ApiDataVo>> pageList(@Valid @RequestBody ApiDataDto dto) {
         return ApiResponse.ok(apiDataService.pageList(dto));
+    }
+    @Operation(summary  = "添加")
+    @RequestMapping(value = "/add",method = RequestMethod.POST)
+    public ApiResponse<Boolean> add(@Valid @RequestBody AddApiDataDto dto) {
+        return ApiResponse.ok(apiDataService.add(dto));
     }
 }

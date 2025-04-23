@@ -3,7 +3,9 @@ package com.damai.service;
 import com.baidu.fsg.uid.UidGenerator;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.damai.client.ApiDataClient;
 import com.damai.core.RedisKeyManage;
+import com.damai.dto.AddApiDataDto;
 import com.damai.dto.ChannelDataAddDto;
 import com.damai.dto.GetChannelDataByCodeDto;
 import com.damai.entity.ChannelTableData;
@@ -13,6 +15,7 @@ import com.damai.redis.RedisCache;
 import com.damai.redis.RedisKeyBuild;
 import com.damai.util.DateUtils;
 import com.damai.vo.GetChannelDataVo;
+import io.seata.spring.annotation.GlobalTransactional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,7 +40,10 @@ public class ChannelDataService {
     private UidGenerator uidGenerator;
     
     @Autowired
-    private RedisCache redisCache; 
+    private RedisCache redisCache;
+    
+    @Autowired
+    private ApiDataClient apiDataClient;
     
     public GetChannelDataVo getByCode(GetChannelDataByCodeDto dto){
         GetChannelDataVo getChannelDataVo = new GetChannelDataVo();
@@ -64,5 +70,16 @@ public class ChannelDataService {
         GetChannelDataVo getChannelDataVo = new GetChannelDataVo();
         BeanUtils.copyProperties(channelData,getChannelDataVo);
         redisCache.set(RedisKeyBuild.createRedisKey(RedisKeyManage.CHANNEL_DATA,getChannelDataVo.getCode()),getChannelDataVo);
+    }
+    @GlobalTransactional(rollbackFor = {Exception.class})
+    @Transactional(rollbackFor = Exception.class)
+    public void test(final ChannelDataAddDto channelDataAddDto) {
+        add(channelDataAddDto);
+        AddApiDataDto apiDataDto = new AddApiDataDto();
+        apiDataDto.setHeadVersion("1.0");
+        apiDataClient.add(apiDataDto);
+        if ("2".equals(channelDataAddDto.getCode())) {
+            throw new RuntimeException("测试异常");
+        }
     }
 }

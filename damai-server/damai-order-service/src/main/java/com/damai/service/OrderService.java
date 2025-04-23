@@ -22,6 +22,7 @@ import com.damai.dto.AccountOrderCountDto;
 import com.damai.dto.NotifyDto;
 import com.damai.dto.OrderCancelDto;
 import com.damai.dto.OrderCreateDto;
+import com.damai.dto.OrderCreateTestDto;
 import com.damai.dto.OrderGetDto;
 import com.damai.dto.OrderListDto;
 import com.damai.dto.OrderPayCheckDto;
@@ -29,6 +30,7 @@ import com.damai.dto.OrderPayDto;
 import com.damai.dto.OrderTicketUserCreateDto;
 import com.damai.dto.PayDto;
 import com.damai.dto.ProgramOperateDataDto;
+import com.damai.dto.ProgramRecordTaskAddDto;
 import com.damai.dto.ReduceRemainNumberDto;
 import com.damai.dto.RefundDto;
 import com.damai.dto.TicketCategoryCountDto;
@@ -48,6 +50,7 @@ import com.damai.enums.SellStatus;
 import com.damai.exception.DaMaiFrameException;
 import com.damai.mapper.OrderMapper;
 import com.damai.mapper.OrderTicketUserMapper;
+import com.damai.mapper.OrderTicketUserRecordMapper;
 import com.damai.redis.RedisCache;
 import com.damai.redis.RedisKeyBuild;
 import com.damai.repeatexecutelimit.annotion.RepeatExecuteLimit;
@@ -72,6 +75,7 @@ import com.damai.vo.TradeCheckVo;
 import com.damai.vo.UserAndTicketUserInfoVo;
 import com.damai.vo.UserGetAndTicketUserListVo;
 import com.damai.vo.UserInfoVo;
+import io.seata.spring.annotation.GlobalTransactional;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RLock;
@@ -150,6 +154,9 @@ public class OrderService extends ServiceImpl<OrderMapper, Order> {
     
     @Autowired
     private ProgramClient programClient;
+    
+    @Autowired
+    private OrderTicketUserRecordMapper orderTicketUserRecordMapper;
 
     @Transactional(rollbackFor = Exception.class)
     public String create(OrderCreateDto orderCreateDto) {
@@ -780,5 +787,53 @@ public class OrderService extends ServiceImpl<OrderMapper, Order> {
     public void delOrderAndOrderTicketUser(){
         orderMapper.relDelOrder();
         orderTicketUserMapper.relDelOrderTicketUser();
+    }
+    @GlobalTransactional(rollbackFor = {Exception.class})
+    @Transactional(rollbackFor = Exception.class)
+    public boolean test(OrderCreateTestDto orderCreateTestDto){
+        long orderNumber = uidGenerator.getOrderNumber(orderCreateTestDto.getUserId(), 2);
+        OrderTicketUserRecord orderTicketUserRecord = new OrderTicketUserRecord();
+        orderTicketUserRecord.setId(uidGenerator.getUid());
+        orderTicketUserRecord.setOrderNumber(orderNumber);
+        orderTicketUserRecord.setTicketUserOrderId(uidGenerator.getUid());
+        orderTicketUserRecord.setProgramId(orderCreateTestDto.getProgramId());
+        orderTicketUserRecord.setUserId(orderCreateTestDto.getUserId());
+        orderTicketUserRecord.setTicketUserId(uidGenerator.getUid());
+        orderTicketUserRecord.setSeatId(1L);
+        orderTicketUserRecord.setIdentifierId(uidGenerator.getUid());
+        orderTicketUserRecordMapper.insert(orderTicketUserRecord);
+        
+        ProgramRecordTaskAddDto programRecordTaskAddDto = new ProgramRecordTaskAddDto();
+        programRecordTaskAddDto.setProgramId(orderCreateTestDto.getProgramId());
+        programClient.add(programRecordTaskAddDto);
+        
+        if ("1".equals(orderCreateTestDto.getHaveException())) {
+            throw new DaMaiFrameException("模拟异常");
+        }
+        return true;
+    }
+    
+    @Transactional(rollbackFor = Exception.class)
+    public boolean testV2(OrderCreateTestDto orderCreateTestDto){
+        long orderNumber = uidGenerator.getOrderNumber(orderCreateTestDto.getUserId(), 2);
+        OrderTicketUserRecord orderTicketUserRecord = new OrderTicketUserRecord();
+        orderTicketUserRecord.setId(uidGenerator.getUid());
+        orderTicketUserRecord.setOrderNumber(orderNumber);
+        orderTicketUserRecord.setTicketUserOrderId(uidGenerator.getUid());
+        orderTicketUserRecord.setProgramId(orderCreateTestDto.getProgramId());
+        orderTicketUserRecord.setUserId(orderCreateTestDto.getUserId());
+        orderTicketUserRecord.setTicketUserId(uidGenerator.getUid());
+        orderTicketUserRecord.setSeatId(1L);
+        orderTicketUserRecord.setIdentifierId(uidGenerator.getUid());
+        orderTicketUserRecordMapper.insert(orderTicketUserRecord);
+        
+        ProgramRecordTaskAddDto programRecordTaskAddDto = new ProgramRecordTaskAddDto();
+        programRecordTaskAddDto.setProgramId(orderCreateTestDto.getProgramId());
+        programClient.add(programRecordTaskAddDto);
+        
+        if ("1".equals(orderCreateTestDto.getHaveException())) {
+            throw new DaMaiFrameException("模拟异常");
+        }
+        return true;
     }
 }
