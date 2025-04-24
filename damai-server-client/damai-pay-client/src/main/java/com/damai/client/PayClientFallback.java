@@ -28,6 +28,7 @@ public class PayClientFallback implements PayClient{
         return ApiResponse.error(BaseCode.SYSTEM_ERROR);
     }
     
+
     @Override
     public ApiResponse<TradeCheckVo> tradeCheck(final TradeCheckDto tradeCheckDto) {
         return ApiResponse.error(BaseCode.SYSTEM_ERROR);

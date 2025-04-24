@@ -15,6 +15,7 @@ import com.damai.client.ProgramClient;
 import com.damai.client.UserClient;
 import com.damai.common.ApiResponse;
 import com.damai.core.RedisKeyManage;
+import com.damai.domain.DiscardOrder;
 import com.damai.domain.OrderCreateDomain;
 import com.damai.domain.OrderCreateMq;
 import com.damai.domain.SeatIdAndTicketUserIdDomain;
@@ -42,6 +43,7 @@ import com.damai.entity.OrderTicketUserAggregate;
 import com.damai.entity.OrderTicketUserRecord;
 import com.damai.enums.BaseCode;
 import com.damai.enums.BusinessStatus;
+import com.damai.enums.DiscardOrderReason;
 import com.damai.enums.OrderStatus;
 import com.damai.enums.PayBillStatus;
 import com.damai.enums.PayChannel;
@@ -55,7 +57,6 @@ import com.damai.redis.RedisCache;
 import com.damai.redis.RedisKeyBuild;
 import com.damai.repeatexecutelimit.annotion.RepeatExecuteLimit;
 import com.damai.request.CustomizeRequestWrapper;
-import com.damai.service.delaysend.DelayOperateProgramDataSend;
 import com.damai.service.properties.OrderProperties;
 import com.damai.servicelock.LockType;
 import com.damai.servicelock.annotion.ServiceLock;
@@ -75,7 +76,6 @@ import com.damai.vo.TradeCheckVo;
 import com.damai.vo.UserAndTicketUserInfoVo;
 import com.damai.vo.UserGetAndTicketUserListVo;
 import com.damai.vo.UserInfoVo;
-import io.seata.spring.annotation.GlobalTransactional;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RLock;
@@ -145,9 +145,6 @@ public class OrderService extends ServiceImpl<OrderMapper, Order> {
     @Lazy
     @Autowired
     private OrderService orderService;
-    
-    @Autowired
-    private DelayOperateProgramDataSend delayOperateProgramDataSend;
     
     @Autowired
     private ServiceLockTool serviceLockTool;
@@ -492,7 +489,7 @@ public class OrderService extends ServiceImpl<OrderMapper, Order> {
         orderTicketUserSeatList.forEach((k,v) -> {
             seatMap.put(k,v.stream().map(OrderTicketUser::getSeatId).collect(Collectors.toList()));
         });
-        //更新缓存相关数据
+        //更新缓存和节目库相关数据
         updateProgramRelatedDataResolution(programId,seatMap,orderStatus,order.getIdentifierId(),order.getUserId(),seatIdAndTicketUserIdDomainList);
     }
     
@@ -620,9 +617,7 @@ public class OrderService extends ServiceImpl<OrderMapper, Order> {
         data[2] = JSON.toJSONString(jsonArray);
         //座位id和对应的购票人id
         data[3] = JSON.toJSONString(seatIdAndTicketUserIdDomainList);
-        //执行lua脚本
-        orderProgramCacheResolutionOperate.programCacheReverseOperate(keys,data);
-        //更新节目服务的相关数据（通过延迟队列）
+        //更新节目服务的相关数据
         if (Objects.equals(orderStatus.getCode(), OrderStatus.PAY.getCode()) || 
                 Objects.equals(orderStatus.getCode(), OrderStatus.CANCEL.getCode())) {
             ProgramOperateDataDto programOperateDataDto = new ProgramOperateDataDto();
@@ -632,8 +627,13 @@ public class OrderService extends ServiceImpl<OrderMapper, Order> {
             //如果是支付操作，那么座位状态就改为已售卖，如果是取消操作，那么座位状态就改为未售卖
             programOperateDataDto.setSellStatus(Objects.equals(orderStatus.getCode(), OrderStatus.PAY.getCode()) 
                     ? SellStatus.SOLD.getCode() : SellStatus.NO_SOLD.getCode());
-            delayOperateProgramDataSend.sendMessage(JSON.toJSONString(programOperateDataDto));
+            ApiResponse<Boolean> programApiResponse = programClient.operateProgramData(programOperateDataDto);
+            if (!Objects.equals(programApiResponse.getCode(), BaseCode.SUCCESS.getCode())) {
+                throw new DaMaiFrameException(programApiResponse);
+            }
         }
+        //执行lua脚本
+        orderProgramCacheResolutionOperate.programCacheReverseOperate(keys,data);
     }
     
     public List<OrderListVo> selectList(OrderListDto orderListDto) {
@@ -757,8 +757,12 @@ public class OrderService extends ServiceImpl<OrderMapper, Order> {
         reduceRemainNumberDto.setTicketCategoryCountDtoList(ticketCountList);
         ApiResponse<Boolean> programApiResponse = programClient.operateSeatLockAndTicketCategoryRemainNumber(reduceRemainNumberDto);
         if (!Objects.equals(programApiResponse.getCode(), BaseCode.SUCCESS.getCode())) {
+            //将因为修改节目服务余票和座位失败，导致丢弃的订单放入redis中
+            redisCache.leftPushForList(RedisKeyBuild.createRedisKey(RedisKeyManage.DISCARD_ORDER,
+                    orderCreateMq.getProgramId()),new DiscardOrder(orderCreateMq, DiscardOrderReason.MODIFY_PROGRAM_REMAIN_NUMBER_SEAT_FAIL.getCode()));
             throw new DaMaiFrameException(programApiResponse);
         }
+        //真正地创建订单
         String orderNumber = createByMq(orderCreateMq);
         redisCache.set(RedisKeyBuild.createRedisKey(RedisKeyManage.ORDER_MQ,orderNumber),orderNumber,1, TimeUnit.MINUTES);
         return orderNumber;
@@ -788,7 +792,6 @@ public class OrderService extends ServiceImpl<OrderMapper, Order> {
         orderMapper.relDelOrder();
         orderTicketUserMapper.relDelOrderTicketUser();
     }
-    @GlobalTransactional(rollbackFor = {Exception.class})
     @Transactional(rollbackFor = Exception.class)
     public boolean test(OrderCreateTestDto orderCreateTestDto){
         long orderNumber = uidGenerator.getOrderNumber(orderCreateTestDto.getUserId(), 2);

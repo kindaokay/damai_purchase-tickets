@@ -676,7 +676,7 @@ public class ProgramService extends ServiceImpl<ProgramMapper, Program> {
     
     @RepeatExecuteLimit(name = PAY_OR_CANCEL_PROGRAM_ORDER,keys = {"#programOperateDataDto.programId","#programOperateDataDto.seatIdList"})
     @Transactional(rollbackFor = Exception.class)
-    public void operateProgramData(ProgramOperateDataDto programOperateDataDto){
+    public Boolean operateProgramData(ProgramOperateDataDto programOperateDataDto){
         List<Long> seatIdList = programOperateDataDto.getSeatIdList();
         LambdaQueryWrapper<Seat> seatLambdaQueryWrapper =
                 Wrappers.lambdaQuery(Seat.class)
@@ -700,7 +700,6 @@ public class ProgramService extends ServiceImpl<ProgramMapper, Program> {
                 throw new DaMaiFrameException(BaseCode.SEAT_IS_NOT_NOT_LOCK);
             }
         }
-        
         Seat updateSeat = new Seat();
         //订单支付成功的操作
         if (Objects.equals(programOperateDataDto.getSellStatus(),SellStatus.SOLD.getCode())) {
@@ -730,6 +729,7 @@ public class ProgramService extends ServiceImpl<ProgramMapper, Program> {
                 throw new DaMaiFrameException(BaseCode.UPDATE_TICKET_CATEGORY_COUNT_NOT_CORRECT);
             }
         }
+        return true;
     }
     
     private ProgramVo createProgramVo(Long programId){

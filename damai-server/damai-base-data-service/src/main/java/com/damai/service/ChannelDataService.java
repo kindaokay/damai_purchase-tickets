@@ -15,7 +15,6 @@ import com.damai.redis.RedisCache;
 import com.damai.redis.RedisKeyBuild;
 import com.damai.util.DateUtils;
 import com.damai.vo.GetChannelDataVo;
-import io.seata.spring.annotation.GlobalTransactional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -71,7 +70,7 @@ public class ChannelDataService {
         BeanUtils.copyProperties(channelData,getChannelDataVo);
         redisCache.set(RedisKeyBuild.createRedisKey(RedisKeyManage.CHANNEL_DATA,getChannelDataVo.getCode()),getChannelDataVo);
     }
-    @GlobalTransactional(rollbackFor = {Exception.class})
+
     @Transactional(rollbackFor = Exception.class)
     public void test(final ChannelDataAddDto channelDataAddDto) {
         add(channelDataAddDto);

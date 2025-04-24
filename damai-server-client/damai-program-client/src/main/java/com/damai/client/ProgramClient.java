@@ -1,6 +1,7 @@
 package com.damai.client;
 
 import com.damai.common.ApiResponse;
+import com.damai.dto.ProgramOperateDataDto;
 import com.damai.dto.ProgramRecordTaskAddDto;
 import com.damai.dto.ProgramRecordTaskListDto;
 import com.damai.dto.ProgramRecordTaskUpdateDto;
@@ -71,4 +72,12 @@ public interface ProgramClient {
      * */
     @PostMapping(value = "program/record/task/add")
     ApiResponse<Integer> add(ProgramRecordTaskAddDto orderTicketUserRecordAddDto);
+    
+    /**
+     * 订单支付成功或者取消订单后对节目服务库的相关操作
+     * @param programOperateDataDto 参数
+     * @return 结果
+     */
+    @PostMapping(value = "/program/interior/operate/program/data")
+    ApiResponse<Boolean> operateProgramData(ProgramOperateDataDto programOperateDataDto);
 }

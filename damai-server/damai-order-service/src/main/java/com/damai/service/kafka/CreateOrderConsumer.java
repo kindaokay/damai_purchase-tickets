@@ -5,7 +5,7 @@ import com.damai.core.RedisKeyManage;
 import com.damai.domain.DiscardOrder;
 import com.damai.domain.OrderCreateMq;
 import com.damai.dto.OrderTicketUserCreateDto;
-import com.damai.enums.OrderStatus;
+import com.damai.enums.DiscardOrderReason;
 import com.damai.redis.RedisCache;
 import com.damai.redis.RedisKeyBuild;
 import com.damai.service.OrderService;
@@ -68,9 +68,9 @@ public class CreateOrderConsumer {
                     });
                     log.info("消费到kafka的创建订单消息延迟时间大于了 {} 毫秒 此订单消息被丢弃 订单号 : {} 座位信息 : {}",
                             delayTime,orderCreateMq.getOrderNumber(),JSON.toJSONString(seatMap));
-                    //将丢弃的订单放入redis中
+                    //将延迟丢弃的订单放入redis中
                     redisCache.leftPushForList(RedisKeyBuild.createRedisKey(RedisKeyManage.DISCARD_ORDER,
-                            orderCreateMq.getProgramId()),new DiscardOrder(orderCreateMq.getProgramId(),seatMap, OrderStatus.CANCEL.getCode()));
+                            orderCreateMq.getProgramId()),new DiscardOrder(orderCreateMq, DiscardOrderReason.CONSUMER_DELAY.getCode()));
                 }else {
                     String orderNumber = orderService.createMq(orderCreateMq);
                     log.info("消费到kafka的创建订单消息 创建订单成功 订单号 : {}",orderNumber);

@@ -48,7 +48,7 @@ rules:
         tableStrategy:
           complex:
             shardingColumns: order_number,user_id
-            shardingAlgorithmName: tableOrderTicketUserRecordComplexGeneArithmetic      
+            shardingAlgorithmName: tableOrderTicketUserRecordComplexGeneArithmetic
     bindingTables:
       - d_order,d_order_ticket_user
     shardingAlgorithms:
