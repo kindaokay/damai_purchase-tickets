@@ -17,13 +17,16 @@ import com.damai.domain.SeatRecord;
 import com.damai.domain.TicketCategoryRecord;
 import com.damai.dto.TicketCategoryListDto;
 import com.damai.entity.Order;
+import com.damai.entity.OrderProgram;
 import com.damai.entity.OrderTicketUserRecord;
 import com.damai.enums.BaseCode;
+import com.damai.enums.HandleStatus;
 import com.damai.enums.ReconciliationStatus;
 import com.damai.enums.RecordType;
 import com.damai.enums.SellStatus;
 import com.damai.exception.DaMaiFrameException;
 import com.damai.mapper.OrderMapper;
+import com.damai.mapper.OrderProgramMapper;
 import com.damai.mapper.OrderTicketUserMapper;
 import com.damai.mapper.OrderTicketUserRecordMapper;
 import com.damai.redis.RedisCache;
@@ -87,7 +90,7 @@ public class OrderTaskService {
     private TicketRemainNumberHandler ticketRemainNumberHandler;
     
     @Autowired
-    private OrderService orderService;
+    private OrderProgramMapper orderProgramMapper;
     
     /**
      * 对账查询，得到的redis为主和数据库为主的对比结果还并没有优化合并
@@ -166,18 +169,18 @@ public class OrderTaskService {
     public List<ExaminationIdentifierResult> reconciliationDbStandard(Long programId, Map<String, String> programRecordMap) {
         //redis和数据对账结果(节目维度)
         List<ExaminationIdentifierResult> examinationIdentifierResultList = new ArrayList<>();
-        //查询订单
-        List<Order> orderList = 
-                orderMapper.selectList(Wrappers.lambdaQuery(Order.class)
-                        .eq(Order::getReconciliationStatus, ReconciliationStatus.RECONCILIATION_NO.getCode())
-                        .eq(Order::getProgramId, programId));
-        if (CollectionUtil.isEmpty(orderList)) {
+        //查询订单节目
+        List<OrderProgram> orderProgramList = 
+                orderProgramMapper.selectList(Wrappers.lambdaQuery(OrderProgram.class)
+                        .eq(OrderProgram::getHandleStatus, HandleStatus.NO_HANDLE.getCode())
+                        .eq(OrderProgram::getProgramId, programId));
+        if (CollectionUtil.isEmpty(orderProgramList)) {
             return examinationIdentifierResultList;
         }
         //购票人订单记录中的座位
         List<OrderTicketUserRecord> orderTicketUserRecordList = 
                 orderTicketUserRecordMapper.selectList(Wrappers.lambdaQuery(OrderTicketUserRecord.class)
-                        .in(OrderTicketUserRecord::getOrderNumber, orderList.stream().map(Order::getOrderNumber)
+                        .in(OrderTicketUserRecord::getOrderNumber, orderProgramList.stream().map(OrderProgram::getOrderNumber)
                                 .collect(Collectors.toList())).eq(OrderTicketUserRecord::getReconciliationStatus, ReconciliationStatus.RECONCILIATION_NO.getCode()));
         //key：记录类型_记录标识_用户id  value：购票人订单记录
         Map<String, List<OrderTicketUserRecord>> orderTicketUserRecordMap = orderTicketUserRecordList.stream().collect(Collectors.groupingBy(record -> record.getRecordTypeValue() + GLIDE_LINE + record.getIdentifierId() + GLIDE_LINE + record.getUserId()));
@@ -463,7 +466,7 @@ public class OrderTaskService {
     
     /**
      * @param programId 节目id
-     * @param needToRedisRecordMap 记录标识_用户id   value：有顺序的ProgramRecord集合，顺序为reduce、changeStatus、increase
+     * @param needToRedisRecordMap value:记录标识_用户id   value：有顺序的ProgramRecord集合，顺序为reduce、changeStatus、increase
      * @param programRecordMap 查询redis中的节目记录
      * */
     public Map<String, ProgramRecord> compensateRedisRecord(Long programId, 
@@ -501,7 +504,7 @@ public class OrderTaskService {
      */
     public void restoreSingleOrder(List<ProgramRecord> programRecords, Map<Long, Long> ticketCategoryRemainNumberMap) {
         
-        //1. 把“从最早到最新”的列表倒过来，最新地记录先还原
+        //1. 把“从最早到最新”的列表倒过来，increase、changeStatus、reduce 最新地记录先还原
         Collections.reverse(programRecords);
         
         //2. 逐条记录做逆向“撤销”

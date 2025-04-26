@@ -38,6 +38,7 @@ import com.damai.dto.TicketCategoryCountDto;
 import com.damai.dto.TradeCheckDto;
 import com.damai.dto.UserGetAndTicketUserListDto;
 import com.damai.entity.Order;
+import com.damai.entity.OrderProgram;
 import com.damai.entity.OrderTicketUser;
 import com.damai.entity.OrderTicketUserAggregate;
 import com.damai.entity.OrderTicketUserRecord;
@@ -51,6 +52,7 @@ import com.damai.enums.RecordType;
 import com.damai.enums.SellStatus;
 import com.damai.exception.DaMaiFrameException;
 import com.damai.mapper.OrderMapper;
+import com.damai.mapper.OrderProgramMapper;
 import com.damai.mapper.OrderTicketUserMapper;
 import com.damai.mapper.OrderTicketUserRecordMapper;
 import com.damai.redis.RedisCache;
@@ -154,6 +156,9 @@ public class OrderService extends ServiceImpl<OrderMapper, Order> {
     
     @Autowired
     private OrderTicketUserRecordMapper orderTicketUserRecordMapper;
+    
+    @Autowired
+    private OrderProgramMapper orderProgramMapper;
 
     @Transactional(rollbackFor = Exception.class)
     public String create(OrderCreateDto orderCreateDto) {
@@ -207,6 +212,13 @@ public class OrderService extends ServiceImpl<OrderMapper, Order> {
         orderTicketUserService.saveBatch(orderTicketUserList);
         //插入购票人订单记录
         orderTicketUserRecordService.saveBatch(orderTicketUserRecordList);
+        //插入订单节目
+        OrderProgram orderProgram = new OrderProgram();
+        orderProgram.setId(uidGenerator.getUid());
+        orderProgram.setProgramId(order.getProgramId());
+        orderProgram.setOrderNumber(order.getOrderNumber());
+        orderProgram.setIdentifierId(order.getIdentifierId());
+        orderProgramMapper.insert(orderProgram);
         //用户下此节目的订单数量加1操作
         redisCache.incrBy(RedisKeyBuild.createRedisKey(
                 RedisKeyManage.ACCOUNT_ORDER_COUNT,orderCreateDomain.getUserId(),

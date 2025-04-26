@@ -6,15 +6,15 @@ local placeholder_seat_no_sold_hash_key = KEYS[2]
 local placeholder_seat_lock_hash_key = KEYS[3]
 -- 节目id
 local program_id = KEYS[4]
--- 记录的key
+-- 记录的key 对应的真正数据是 d_mai_program_record_%s
 local record_hash_key = KEYS[5]
--- 记录标识
+-- 记录标识  对应的真正数据是 reduce_993369070199742464_992950774744588290
 local identifier_id = KEYS[6]
--- 记录类型
+-- 记录类型 对应的真正数据是 reduce
 local record_type = KEYS[7]
 -- 要购买的票档 包括票档id和票档数量
 local ticket_count_list = cjson.decode(ARGV[1])
--- 购票人id集合
+-- 购票人id集合 对应的数据是购票人id集合
 local ticket_user_id_list = cjson.decode(ARGV[3])
 -- 过滤后符合条件可以购买的座位集合
 local purchase_seat_list = {}
@@ -22,7 +22,7 @@ local purchase_seat_list = {}
 local total_seat_dto_price = 0
 -- 缓存座位价格总和
 local total_seat_vo_price = 0
--- 记录的票档集合记录
+-- 记录的票档集合记录 拼接后的记录的票档集合
 local ticket_category_record_list = {}
 -- 锁定状态
 local lock_status = 2

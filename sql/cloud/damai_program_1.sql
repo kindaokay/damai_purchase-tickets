@@ -240,7 +240,7 @@ DROP TABLE IF EXISTS `d_program_record_task_0`;
 CREATE TABLE `d_program_record_task_0` (
   `id` bigint(20) NOT NULL COMMENT '主键id',
   `program_id` bigint(20) NOT NULL COMMENT '节目表id',
-  `handle_status` tinyint(1) NOT NULL DEFAULT '1' COMMENT '处理状态 1:未处理 1:已处理',
+  `handle_status` tinyint(1) NOT NULL DEFAULT '1' COMMENT '处理状态 1:未处理 2:已处理',
   `create_time` datetime NOT NULL COMMENT '创建时间',
   `edit_time` datetime NOT NULL COMMENT '编辑时间',
   `status` tinyint(1) NOT NULL DEFAULT '1' COMMENT '1:正常 0:删除',
@@ -268,7 +268,7 @@ DROP TABLE IF EXISTS `d_program_record_task_1`;
 CREATE TABLE `d_program_record_task_1` (
   `id` bigint(20) NOT NULL COMMENT '主键id',
   `program_id` bigint(20) NOT NULL COMMENT '节目表id',
-  `handle_status` tinyint(1) NOT NULL DEFAULT '1' COMMENT '处理状态 1:未处理 1:已处理',
+  `handle_status` tinyint(1) NOT NULL DEFAULT '1' COMMENT '处理状态 1:未处理 2:已处理',
   `create_time` datetime NOT NULL COMMENT '创建时间',
   `edit_time` datetime NOT NULL COMMENT '编辑时间',
   `status` tinyint(1) NOT NULL DEFAULT '1' COMMENT '1:正常 0:删除',

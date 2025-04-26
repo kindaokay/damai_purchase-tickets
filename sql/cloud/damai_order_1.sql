@@ -23,7 +23,7 @@ CREATE TABLE `d_order_0` (
   `order_price` decimal(10,0) DEFAULT NULL COMMENT '订单价格',
   `pay_order_type` int(3) DEFAULT NULL COMMENT '支付订单方式',
   `order_status` int(3) DEFAULT '1' COMMENT '订单状态 1:未支付 2:已取消 3:已支付 4:已退单',
-  `reconciliation_status` int(3) DEFAULT '1' COMMENT '对账状态 1:未对账 -1:对账完成有问题 1:对账完成没有问题 2:对账有问题处理完毕',
+  `reconciliation_status` int(3) DEFAULT '1' COMMENT '对账状态 1:未对账 -1:对账完成有问题 2:对账完成没有问题 3:对账有问题处理完毕',
   `create_order_time` datetime DEFAULT NULL COMMENT '生成订单时间',
   `cancel_order_time` datetime DEFAULT NULL COMMENT '取消订单时间',
   `pay_order_time` datetime DEFAULT NULL COMMENT '支付订单时间',
@@ -69,7 +69,7 @@ CREATE TABLE `d_order_1` (
   `order_price` decimal(10,0) DEFAULT NULL COMMENT '订单价格',
   `pay_order_type` int(3) DEFAULT NULL COMMENT '支付订单方式',
   `order_status` int(3) DEFAULT '1' COMMENT '订单状态 1:未支付 2:已取消 3:已支付 4:已退单',
-  `reconciliation_status` int(3) DEFAULT '1' COMMENT '对账状态 1:未对账 -1:对账完成有问题 1:对账完成没有问题 2:对账有问题处理完毕',
+  `reconciliation_status` int(3) DEFAULT '1' COMMENT '对账状态 1:未对账 -1:对账完成有问题 2:对账完成没有问题 3:对账有问题处理完毕',
   `create_order_time` datetime DEFAULT NULL COMMENT '生成订单时间',
   `cancel_order_time` datetime DEFAULT NULL COMMENT '取消订单时间',
   `pay_order_time` datetime DEFAULT NULL COMMENT '支付订单时间',
@@ -115,7 +115,7 @@ CREATE TABLE `d_order_2` (
   `order_price` decimal(10,0) DEFAULT NULL COMMENT '订单价格',
   `pay_order_type` int(3) DEFAULT NULL COMMENT '支付订单方式',
   `order_status` int(3) DEFAULT '1' COMMENT '订单状态 1:未支付 2:已取消 3:已支付 4:已退单',
-  `reconciliation_status` int(3) DEFAULT '1' COMMENT '对账状态 1:未对账 -1:对账完成有问题 1:对账完成没有问题 2:对账有问题处理完毕',
+  `reconciliation_status` int(3) DEFAULT '1' COMMENT '对账状态 1:未对账 -1:对账完成有问题 2:对账完成没有问题 3:对账有问题处理完毕',
   `create_order_time` datetime DEFAULT NULL COMMENT '生成订单时间',
   `cancel_order_time` datetime DEFAULT NULL COMMENT '取消订单时间',
   `pay_order_time` datetime DEFAULT NULL COMMENT '支付订单时间',
@@ -161,7 +161,7 @@ CREATE TABLE `d_order_3` (
   `order_price` decimal(10,0) DEFAULT NULL COMMENT '订单价格',
   `pay_order_type` int(3) DEFAULT NULL COMMENT '支付订单方式',
   `order_status` int(3) DEFAULT '1' COMMENT '订单状态 1:未支付 2:已取消 3:已支付 4:已退单',
-  `reconciliation_status` int(3) DEFAULT '1' COMMENT '对账状态 1:未对账 -1:对账完成有问题 1:对账完成没有问题 2:对账有问题处理完毕',
+  `reconciliation_status` int(3) DEFAULT '1' COMMENT '对账状态 1:未对账 -1:对账完成有问题 2:对账完成没有问题 3:对账有问题处理完毕',
   `create_order_time` datetime DEFAULT NULL COMMENT '生成订单时间',
   `cancel_order_time` datetime DEFAULT NULL COMMENT '取消订单时间',
   `pay_order_time` datetime DEFAULT NULL COMMENT '支付订单时间',
@@ -204,7 +204,7 @@ CREATE TABLE `d_order_ticket_user_0` (
   `pay_order_price` decimal(10,0) DEFAULT NULL COMMENT '支付订单价格',
   `pay_order_type` int(3) DEFAULT NULL COMMENT '支付订单方式',
   `order_status` int(3) DEFAULT '1' COMMENT '订单状态 1:未支付 2:已取消 3:已支付 4:已退单',
-  `reconciliation_status` int(3) DEFAULT '1' COMMENT '对账状态 1:未对账 -1:对账完成有问题 1:对账完成没有问题 2:对账有问题处理完毕',
+  `reconciliation_status` int(3) DEFAULT '1' COMMENT '对账状态 1:未对账 -1:对账完成有问题 2:对账完成没有问题 3:对账有问题处理完毕',
   `create_order_time` datetime DEFAULT NULL COMMENT '生成订单时间',
   `cancel_order_time` datetime DEFAULT NULL COMMENT '取消订单时间',
   `pay_order_time` datetime DEFAULT NULL COMMENT '支付订单时间',
@@ -248,7 +248,7 @@ CREATE TABLE `d_order_ticket_user_1` (
   `pay_order_price` decimal(10,0) DEFAULT NULL COMMENT '支付订单价格',
   `pay_order_type` int(3) DEFAULT NULL COMMENT '支付订单方式',
   `order_status` int(3) DEFAULT '1' COMMENT '订单状态 1:未支付 2:已取消 3:已支付 4:已退单',
-  `reconciliation_status` int(3) DEFAULT '1' COMMENT '对账状态 1:未对账 -1:对账完成有问题 1:对账完成没有问题 2:对账有问题处理完毕',
+  `reconciliation_status` int(3) DEFAULT '1' COMMENT '对账状态 1:未对账 -1:对账完成有问题 2:对账完成没有问题 3:对账有问题处理完毕',
   `create_order_time` datetime DEFAULT NULL COMMENT '生成订单时间',
   `cancel_order_time` datetime DEFAULT NULL COMMENT '取消订单时间',
   `pay_order_time` datetime DEFAULT NULL COMMENT '支付订单时间',
@@ -292,7 +292,7 @@ CREATE TABLE `d_order_ticket_user_2` (
   `pay_order_price` decimal(10,0) DEFAULT NULL COMMENT '支付订单价格',
   `pay_order_type` int(3) DEFAULT NULL COMMENT '支付订单方式',
   `order_status` int(3) DEFAULT '1' COMMENT '订单状态 1:未支付 2:已取消 3:已支付 4:已退单',
-  `reconciliation_status` int(3) DEFAULT '1' COMMENT '对账状态 1:未对账 -1:对账完成有问题 1:对账完成没有问题 2:对账有问题处理完毕',
+  `reconciliation_status` int(3) DEFAULT '1' COMMENT '对账状态 1:未对账 -1:对账完成有问题 2:对账完成没有问题 3:对账有问题处理完毕',
   `create_order_time` datetime DEFAULT NULL COMMENT '生成订单时间',
   `cancel_order_time` datetime DEFAULT NULL COMMENT '取消订单时间',
   `pay_order_time` datetime DEFAULT NULL COMMENT '支付订单时间',
@@ -336,7 +336,7 @@ CREATE TABLE `d_order_ticket_user_3` (
   `pay_order_price` decimal(10,0) DEFAULT NULL COMMENT '支付订单价格',
   `pay_order_type` int(3) DEFAULT NULL COMMENT '支付订单方式',
   `order_status` int(3) DEFAULT '1' COMMENT '订单状态 1:未支付 2:已取消 3:已支付 4:已退单',
-  `reconciliation_status` int(3) DEFAULT '1' COMMENT '对账状态 1:未对账 -1:对账完成有问题 1:对账完成没有问题 2:对账有问题处理完毕',
+  `reconciliation_status` int(3) DEFAULT '1' COMMENT '对账状态 1:未对账 -1:对账完成有问题 2:对账完成没有问题 3:对账有问题处理完毕',
   `create_order_time` datetime DEFAULT NULL COMMENT '生成订单时间',
   `cancel_order_time` datetime DEFAULT NULL COMMENT '取消订单时间',
   `pay_order_time` datetime DEFAULT NULL COMMENT '支付订单时间',
@@ -381,7 +381,7 @@ CREATE TABLE `d_order_ticket_user_record_0` (
   `order_price` decimal(10,0) DEFAULT NULL COMMENT '订单价格',
   `record_type_code` int(3) DEFAULT NULL COMMENT '记录类型编码 -1:扣减余票 0:改变状态 1:增加余票',
   `record_type_value` varchar(256) DEFAULT NULL COMMENT '记录类型值 -1:扣减余票(reduce) 0:改变状态(changeStatus) 1:增加余票(increase)',
-  `reconciliation_status` int(3) DEFAULT '1' COMMENT '对账状态 1:未对账 -1:对账完成有问题 1:对账完成没有问题 2:对账有问题处理完毕',
+  `reconciliation_status` int(3) DEFAULT '1' COMMENT '对账状态 1:未对账 -1:对账完成有问题 2:对账完成没有问题 3:对账有问题处理完毕',
   `create_type` int(3) NOT NULL DEFAULT '1' COMMENT '创建类型 1:正常创建 2:补偿创建',
   `create_time` datetime DEFAULT NULL COMMENT '创建时间',
   `edit_time` datetime DEFAULT NULL COMMENT '编辑时间',
@@ -424,7 +424,7 @@ CREATE TABLE `d_order_ticket_user_record_1` (
   `order_price` decimal(10,0) DEFAULT NULL COMMENT '订单价格',
   `record_type_code` int(3) DEFAULT NULL COMMENT '记录类型编码 -1:扣减余票 0:改变状态 1:增加余票',
   `record_type_value` varchar(256) DEFAULT NULL COMMENT '记录类型值 -1:扣减余票(reduce) 0:改变状态(changeStatus) 1:增加余票(increase)',
-  `reconciliation_status` int(3) DEFAULT '1' COMMENT '对账状态 1:未对账 -1:对账完成有问题 1:对账完成没有问题 2:对账有问题处理完毕',
+  `reconciliation_status` int(3) DEFAULT '1' COMMENT '对账状态 1:未对账 -1:对账完成有问题 2:对账完成没有问题 3:对账有问题处理完毕',
   `create_type` int(3) NOT NULL DEFAULT '1' COMMENT '创建类型 1:正常创建 2:补偿创建',
   `create_time` datetime DEFAULT NULL COMMENT '创建时间',
   `edit_time` datetime DEFAULT NULL COMMENT '编辑时间',
@@ -467,7 +467,7 @@ CREATE TABLE `d_order_ticket_user_record_2` (
   `order_price` decimal(10,0) DEFAULT NULL COMMENT '订单价格',
   `record_type_code` int(3) DEFAULT NULL COMMENT '记录类型编码 -1:扣减余票 0:改变状态 1:增加余票',
   `record_type_value` varchar(256) DEFAULT NULL COMMENT '记录类型值 -1:扣减余票(reduce) 0:改变状态(changeStatus) 1:增加余票(increase)',
-  `reconciliation_status` int(3) DEFAULT '1' COMMENT '对账状态 1:未对账 -1:对账完成有问题 1:对账完成没有问题 2:对账有问题处理完毕',
+  `reconciliation_status` int(3) DEFAULT '1' COMMENT '对账状态 1:未对账 -1:对账完成有问题 2:对账完成没有问题 3:对账有问题处理完毕',
   `create_type` int(3) NOT NULL DEFAULT '1' COMMENT '创建类型 1:正常创建 2:补偿创建',
   `create_time` datetime DEFAULT NULL COMMENT '创建时间',
   `edit_time` datetime DEFAULT NULL COMMENT '编辑时间',
@@ -510,7 +510,7 @@ CREATE TABLE `d_order_ticket_user_record_3` (
   `order_price` decimal(10,0) DEFAULT NULL COMMENT '订单价格',
   `record_type_code` int(3) DEFAULT NULL COMMENT '记录类型编码 -1:扣减余票 0:改变状态 1:增加余票',
   `record_type_value` varchar(256) DEFAULT NULL COMMENT '记录类型值 -1:扣减余票(reduce) 0:改变状态(changeStatus) 1:增加余票(increase)',
-  `reconciliation_status` int(3) DEFAULT '1' COMMENT '对账状态 1:未对账 -1:对账完成有问题 1:对账完成没有问题 2:对账有问题处理完毕',
+  `reconciliation_status` int(3) DEFAULT '1' COMMENT '对账状态 1:未对账 -1:对账完成有问题 2:对账完成没有问题 3:对账有问题处理完毕',
   `create_type` int(3) NOT NULL DEFAULT '1' COMMENT '创建类型 1:正常创建 2:补偿创建',
   `create_time` datetime DEFAULT NULL COMMENT '创建时间',
   `edit_time` datetime DEFAULT NULL COMMENT '编辑时间',
@@ -531,6 +531,39 @@ LOCK TABLES `d_order_ticket_user_record_3` WRITE;
 /*!40000 ALTER TABLE `d_order_ticket_user_record_3` DISABLE KEYS */;
 /*!40000 ALTER TABLE `d_order_ticket_user_record_3` ENABLE KEYS */;
 UNLOCK TABLES;
+
+
+DROP TABLE IF EXISTS `d_order_program_0`;
+CREATE TABLE `d_order_program_0` (
+ `id` bigint NOT NULL COMMENT '主键id',
+ `program_id` bigint NOT NULL COMMENT '节目id',
+ `order_number` bigint NOT NULL COMMENT '订单编号',
+ `identifier_id` bigint DEFAULT NULL COMMENT '记录id',
+ `handle_status` tinyint(1) NOT NULL DEFAULT '1' COMMENT '处理状态 1:未处理 2:已处理',
+ `create_time` datetime NOT NULL COMMENT '创建时间',
+ `edit_time` datetime NOT NULL COMMENT '编辑时间',
+ `status` tinyint(1) NOT NULL DEFAULT '1' COMMENT '1:正常 0:删除',
+ PRIMARY KEY (`id`),
+ KEY `order_program_program_id_idx` (`program_id`) USING BTREE,
+ KEY `order_program_order_number_idx` (`order_number`) USING BTREE,
+ KEY `order_program_identifier_id_idx` (`identifier_id`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='节目订单表';
+
+DROP TABLE IF EXISTS `d_order_program_1`;
+CREATE TABLE `d_order_program_1` (
+ `id` bigint NOT NULL COMMENT '主键id',
+ `program_id` bigint NOT NULL COMMENT '节目id',
+ `order_number` bigint NOT NULL COMMENT '订单编号',
+ `identifier_id` bigint DEFAULT NULL COMMENT '记录id',
+ `handle_status` tinyint(1) NOT NULL DEFAULT '1' COMMENT '处理状态 1:未处理 2:已处理',
+ `create_time` datetime NOT NULL COMMENT '创建时间',
+ `edit_time` datetime NOT NULL COMMENT '编辑时间',
+ `status` tinyint(1) NOT NULL DEFAULT '1' COMMENT '1:正常 0:删除',
+ PRIMARY KEY (`id`),
+ KEY `order_program_program_id_idx` (`program_id`) USING BTREE,
+ KEY `order_program_order_number_idx` (`order_number`) USING BTREE,
+ KEY `order_program_identifier_id_idx` (`identifier_id`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='节目订单表';
 
 --
 -- Table structure for table `undo_log`

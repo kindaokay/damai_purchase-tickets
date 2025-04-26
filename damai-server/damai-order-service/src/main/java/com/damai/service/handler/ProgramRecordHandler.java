@@ -5,12 +5,15 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.damai.core.RedisKeyManage;
 import com.damai.domain.ProgramRecord;
 import com.damai.entity.Order;
+import com.damai.entity.OrderProgram;
 import com.damai.entity.OrderTicketUser;
 import com.damai.entity.OrderTicketUserRecord;
 import com.damai.enums.BaseCode;
+import com.damai.enums.HandleStatus;
 import com.damai.enums.ReconciliationStatus;
 import com.damai.exception.DaMaiFrameException;
 import com.damai.mapper.OrderMapper;
+import com.damai.mapper.OrderProgramMapper;
 import com.damai.mapper.OrderTicketUserMapper;
 import com.damai.mapper.OrderTicketUserRecordMapper;
 import com.damai.redis.RedisCache;
@@ -49,6 +52,9 @@ public class ProgramRecordHandler {
     
     @Autowired
     private OrderTicketUserRecordMapper orderTicketUserRecordMapper;
+    
+    @Autowired
+    private OrderProgramMapper orderProgramMapper;
     
     /**
      * 向redis中添加补偿的记录，从未完成记录中转移到完整的记录
@@ -128,6 +134,13 @@ public class ProgramRecordHandler {
         orderTicketUserMapper.update(updateOrderTicketUser,Wrappers.lambdaUpdate(OrderTicketUser.class)
                 .eq(OrderTicketUser::getOrderNumber, orderNumber)
                 .eq(OrderTicketUser::getReconciliationStatus, ReconciliationStatus.RECONCILIATION_NO.getCode()));
+        //将订单节目的对账状态更新为已对账
+        OrderProgram updateOrderProgram = new OrderProgram();
+        updateOrderProgram.setHandleStatus(HandleStatus.YES_HANDLE.getCode());
+        orderProgramMapper.update(updateOrderProgram,Wrappers.lambdaUpdate(OrderProgram.class)
+                .eq(OrderProgram::getOrderNumber, orderNumber)
+                .eq(OrderProgram::getHandleStatus, HandleStatus.NO_HANDLE.getCode())
+                .eq(OrderProgram::getProgramId, programId));
         //将购票人订单记录的对账状态更新为已对账
         OrderTicketUserRecord updateOrderTicketUserRecord = new OrderTicketUserRecord();
         updateOrderTicketUserRecord.setReconciliationStatus(reconciliationStatus.getCode());
