@@ -49,6 +49,16 @@ rules:
           complex:
             shardingColumns: order_number,user_id
             shardingAlgorithmName: tableOrderTicketUserRecordComplexGeneArithmetic
+      d_order_program:
+        actualDataNodes: ds_${0..1}.d_order_program_${0..1}
+        databaseStrategy:
+          standard:
+            shardingColumn: program_id
+            shardingAlgorithmName: databaseOrderProgramModModel
+        tableStrategy:
+          standard:
+            shardingColumn: program_id
+            shardingAlgorithmName: tableOrderProgramModModel
     bindingTables:
       - d_order,d_order_ticket_user
     shardingAlgorithms:
@@ -91,5 +101,13 @@ rules:
           sharding-count: 4
           strategy: complex
           algorithmClassName: com.damai.shardingsphere.TableOrderComplexGeneArithmetic
+      databaseOrderProgramModModel:
+        type: MOD
+        props:
+          sharding-count: 2
+      tableOrderProgramModModel:
+        type: MOD
+        props:
+          sharding-count: 2
 props:
   sql-show: true
