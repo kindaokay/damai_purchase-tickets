@@ -10,5 +10,9 @@ import com.damai.entity.ProgramRecordTask;
  * @author: 阿星不是程序员
  **/
 public interface ProgramRecordTaskMapper extends BaseMapper<ProgramRecordTask> {
-
+    /**
+     * 真实删除节目对账记录任务数据
+     * @return 结果
+     * */
+    Integer relDelProgramRecordTask();
 }

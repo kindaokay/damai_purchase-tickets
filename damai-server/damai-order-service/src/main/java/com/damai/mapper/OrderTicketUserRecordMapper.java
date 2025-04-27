@@ -10,6 +10,10 @@ import com.damai.entity.OrderTicketUserRecord;
  **/
 public interface OrderTicketUserRecordMapper extends BaseMapper<OrderTicketUserRecord> {
     
-  
+    /**
+     * 真实删除购票人订单记录数据
+     * @return 结果
+     * */
+    Integer relDelOrderTicketUserRecord();
 
 }

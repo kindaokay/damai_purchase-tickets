@@ -11,4 +11,9 @@ import com.damai.entity.OrderProgram;
  **/
 public interface OrderProgramMapper extends BaseMapper<OrderProgram> {
     
+    /**
+     * 真实删除订单节目数据
+     * @return 结果
+     * */
+    Integer relDelOrderProgram();
 }

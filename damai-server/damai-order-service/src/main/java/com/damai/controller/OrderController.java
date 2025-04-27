@@ -5,12 +5,12 @@ import com.damai.domain.ReconciliationTaskData;
 import com.damai.dto.AccountOrderCountDto;
 import com.damai.dto.OrderCancelDto;
 import com.damai.dto.OrderCreateDto;
-import com.damai.dto.OrderCreateTestDto;
 import com.damai.dto.OrderGetDto;
 import com.damai.dto.OrderListDto;
 import com.damai.dto.OrderPayCheckDto;
 import com.damai.dto.OrderPayDto;
 import com.damai.dto.ProgramGetDto;
+import com.damai.scheduletask.OrderDataTask;
 import com.damai.scheduletask.ReconciliationTask;
 import com.damai.service.OrderService;
 import com.damai.service.OrderTaskService;
@@ -48,6 +48,9 @@ public class OrderController {
     
     @Autowired
     private ReconciliationTask reconciliationTask;
+    
+    @Autowired
+    private OrderDataTask orderDataTask;
     
     @Operation(summary  = "订单创建(不提供给前端调用，只允许内部program服务调用)")
     @PostMapping(value = "/create")
@@ -118,13 +121,8 @@ public class OrderController {
     
     @Operation(summary  = "测试")
     @PostMapping(value = "/test")
-    public ApiResponse<Boolean> test(@Valid @RequestBody OrderCreateTestDto orderCreateTestDto) {
-        return ApiResponse.ok(orderService.test(orderCreateTestDto));
-    }
-    
-    @Operation(summary  = "测试")
-    @PostMapping(value = "/test/v2")
-    public ApiResponse<Boolean> testV2(@Valid @RequestBody OrderCreateTestDto orderCreateTestDto) {
-        return ApiResponse.ok(orderService.testV2(orderCreateTestDto));
+    public ApiResponse<Void> test() {
+        orderDataTask.executeTask();
+        return ApiResponse.ok();
     }
 }

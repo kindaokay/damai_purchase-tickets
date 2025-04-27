@@ -17,11 +17,11 @@
   -->
 
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.damai.mapper.OrderTicketUserRecordMapper">
+<mapper namespace="com.damai.mapper.OrderProgramMapper">
 
-    <delete id="relDelOrderTicketUserRecord">
+    <delete id="relDelOrderProgram">
         delete
-        from d_order_ticket_user_record
-        where reconciliation_status in (1,-1,2,3)
+        from d_order_program
+        where handle_status in (1,2)
     </delete>
 </mapper>

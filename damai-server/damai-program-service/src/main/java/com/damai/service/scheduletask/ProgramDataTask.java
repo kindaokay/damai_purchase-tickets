@@ -3,6 +3,7 @@ package com.damai.service.scheduletask;
 import cn.hutool.core.collection.CollectionUtil;
 import com.damai.BusinessThreadPool;
 import com.damai.dto.ProgramResetExecuteDto;
+import com.damai.mapper.ProgramRecordTaskMapper;
 import com.damai.service.ProgramService;
 import com.damai.service.init.ProgramElasticsearchInitData;
 import com.damai.service.init.ProgramShowTimeRenewal;
@@ -35,6 +36,9 @@ public class ProgramDataTask {
     @Autowired
     private ProgramElasticsearchInitData programElasticsearchInitData;
     
+    @Autowired
+    private ProgramRecordTaskMapper programRecordTaskMapper;
+    
     
     @Scheduled(cron = "0 0 23 * * ?")
     public void executeTask(){
@@ -49,6 +53,7 @@ public class ProgramDataTask {
                         programService.resetExecute(programResetExecuteDto);
                     }
                 }
+                programRecordTaskMapper.relDelProgramRecordTask();
                 programShowTimeRenewal.executeInit(applicationContext);
                 programElasticsearchInitData.executeInit(applicationContext);
                 

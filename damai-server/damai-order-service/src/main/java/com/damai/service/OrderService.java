@@ -803,33 +803,11 @@ public class OrderService extends ServiceImpl<OrderMapper, Order> {
     public void delOrderAndOrderTicketUser(){
         orderMapper.relDelOrder();
         orderTicketUserMapper.relDelOrderTicketUser();
+        orderTicketUserRecordMapper.relDelOrderTicketUserRecord();
+        orderProgramMapper.relDelOrderProgram();
     }
     @Transactional(rollbackFor = Exception.class)
     public boolean test(OrderCreateTestDto orderCreateTestDto){
-        long orderNumber = uidGenerator.getOrderNumber(orderCreateTestDto.getUserId(), 2);
-        OrderTicketUserRecord orderTicketUserRecord = new OrderTicketUserRecord();
-        orderTicketUserRecord.setId(uidGenerator.getUid());
-        orderTicketUserRecord.setOrderNumber(orderNumber);
-        orderTicketUserRecord.setTicketUserOrderId(uidGenerator.getUid());
-        orderTicketUserRecord.setProgramId(orderCreateTestDto.getProgramId());
-        orderTicketUserRecord.setUserId(orderCreateTestDto.getUserId());
-        orderTicketUserRecord.setTicketUserId(uidGenerator.getUid());
-        orderTicketUserRecord.setSeatId(1L);
-        orderTicketUserRecord.setIdentifierId(uidGenerator.getUid());
-        orderTicketUserRecordMapper.insert(orderTicketUserRecord);
-        
-        ProgramRecordTaskAddDto programRecordTaskAddDto = new ProgramRecordTaskAddDto();
-        programRecordTaskAddDto.setProgramId(orderCreateTestDto.getProgramId());
-        programClient.add(programRecordTaskAddDto);
-        
-        if ("1".equals(orderCreateTestDto.getHaveException())) {
-            throw new DaMaiFrameException("模拟异常");
-        }
-        return true;
-    }
-    
-    @Transactional(rollbackFor = Exception.class)
-    public boolean testV2(OrderCreateTestDto orderCreateTestDto){
         long orderNumber = uidGenerator.getOrderNumber(orderCreateTestDto.getUserId(), 2);
         OrderTicketUserRecord orderTicketUserRecord = new OrderTicketUserRecord();
         orderTicketUserRecord.setId(uidGenerator.getUid());
