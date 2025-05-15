@@ -43,4 +43,6 @@ public class OrderCreateMq {
     
     private List<OrderTicketUserCreateDto> orderTicketUserCreateDtoList;
     
+    private Integer orderVersion;
+    
 }

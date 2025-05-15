@@ -94,7 +94,7 @@ public class ProgramOrderV2Strategy extends AbstractApplicationCommandLineRunner
             serviceLockSuccessList.add(rLock);
         }
         try {
-            return programOrderService.create(programOrderCreateDto);
+            return programOrderService.create(programOrderCreateDto,ProgramOrderVersion.V2_VERSION.getValue());
         }finally {
             for (int i = serviceLockSuccessList.size() - 1; i >= 0; i--) {
                 RLock rLock = serviceLockSuccessList.get(i);

@@ -39,7 +39,7 @@ public class ProgramOrderV1Strategy extends AbstractApplicationCommandLineRunner
     @Override
     public String createOrder(final ProgramOrderCreateDto programOrderCreateDto) {
         compositeContainer.execute(CompositeCheckType.PROGRAM_ORDER_CREATE_CHECK.getValue(),programOrderCreateDto);
-        return programOrderService.create(programOrderCreateDto);
+        return programOrderService.create(programOrderCreateDto,ProgramOrderVersion.V1_VERSION.getValue());
     }
     
     @Override

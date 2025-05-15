@@ -69,4 +69,8 @@ public class OrderCreateDto {
     @NotNull
     private List<OrderTicketUserCreateDto> orderTicketUserCreateDtoList;
     
+    @Schema(name ="orderVersion", type ="Integer", description ="生成订单的版本", requiredMode= RequiredMode.REQUIRED)
+    @NotNull
+    private Integer orderVersion;
+    
 }
