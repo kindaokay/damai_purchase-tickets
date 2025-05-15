@@ -925,6 +925,7 @@ public class ProgramService extends ServiceImpl<ProgramMapper, Program> {
         keys.add(RedisKeyBuild.createRedisKey(RedisKeyManage.PROGRAM_RECORD, programId).getRelKey());
         keys.add(RedisKeyBuild.createRedisKey(RedisKeyManage.PROGRAM_RECORD_FINISH, programId).getRelKey());
         keys.add(RedisKeyBuild.createRedisKey(RedisKeyManage.DISCARD_ORDER, programId).getRelKey());
+        keys.add(RedisKeyBuild.createRedisKey(RedisKeyManage.ACCOUNT_ORDER_COUNT_ALL).getRelKey());
         programDelCacheData.del(keys,new String[]{});
     }
     
