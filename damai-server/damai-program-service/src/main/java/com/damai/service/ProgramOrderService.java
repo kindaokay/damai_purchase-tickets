@@ -258,7 +258,7 @@ public class ProgramOrderService {
                 seatDatajsonObject.put("seatNoSoldHashKey",RedisKeyBuild.createRedisKey(
                         RedisKeyManage.PROGRAM_SEAT_NO_SOLD_RESOLUTION_HASH, programId, ticketCategoryId).getRelKey());
                 //座位数据
-                seatDatajsonObject.put("seatDataList",JSON.toJSONString(seatDtoList));
+                seatDatajsonObject.put("seatDataList",JSON.toJSONString(entry.getValue()));
                 addSeatDatajsonArray.add(seatDatajsonObject);
             }
         }else {
