@@ -9,22 +9,25 @@ public enum ProgramOrderVersion {
     /**
      * 版本
      * */
-    V1_VERSION("v1","v1版本"),
+    V1_VERSION("v1","v1版本",1),
     
-    V2_VERSION("v2","v2版本"),
+    V2_VERSION("v2","v2版本",2),
    
-    V3_VERSION("v3","v3版本"),
+    V3_VERSION("v3","v3版本",3),
     
-    V4_VERSION("v4","v4版本"),
+    V4_VERSION("v4","v4版本",4),
     ;
 
     private final String version;
 
     private final String msg;
+    
+    private final Integer value;
 
-    ProgramOrderVersion(String version, String msg) {
+    ProgramOrderVersion(String version, String msg, Integer value) {
         this.version = version;
         this.msg = msg;
+        this.value = value;
     }
 
     public String getVersion() {
@@ -34,6 +37,10 @@ public enum ProgramOrderVersion {
 
     public String getMsg() {
         return this.msg == null ? "" : this.msg;
+    }
+    
+    public Integer getValue(){
+        return value;
     }
     
 

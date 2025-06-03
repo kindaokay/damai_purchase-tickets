@@ -129,7 +129,7 @@ public class ProgramOrderService {
         return getTicketCategoryVoList;
     }
     
-    public String create(ProgramOrderCreateDto programOrderCreateDto) {
+    public String create(ProgramOrderCreateDto programOrderCreateDto,Integer orderVersion) {
         ProgramShowTime programShowTime =
                 programShowTimeService.selectProgramShowTimeByProgramIdMultipleCache(programOrderCreateDto.getProgramId());
         List<TicketCategoryVo> getTicketCategoryList = 
@@ -190,25 +190,25 @@ public class ProgramOrderService {
             }
         }
         updateProgramCacheDataResolution(programOrderCreateDto.getProgramId(),purchaseSeatList,OrderStatus.NO_PAY);
-        return doCreate(programOrderCreateDto,purchaseSeatList);
+        return doCreate(programOrderCreateDto,purchaseSeatList,orderVersion);
     }
     
     
-    public String createNew(ProgramOrderCreateDto programOrderCreateDto) {
+    public String createNew(ProgramOrderCreateDto programOrderCreateDto,Integer orderVersion) {
         CreateOrderTemporaryData createOrderTemporaryData = createOrderOperateProgramCacheResolution(programOrderCreateDto);
         List<SeatVo> purchaseSeatList = createOrderTemporaryData.getPurchaseSeatList().stream().map(purchaseSeat -> {
             SeatVo seatVo = new SeatVo();
             BeanUtils.copyProperties(purchaseSeat,seatVo);
             return seatVo;
         }).collect(Collectors.toList());
-        return doCreate(programOrderCreateDto,purchaseSeatList);
+        return doCreate(programOrderCreateDto,purchaseSeatList,orderVersion);
     }
     
-    public String createNewAsync(ProgramOrderCreateDto programOrderCreateDto) {
+    public String createNewAsync(ProgramOrderCreateDto programOrderCreateDto,Integer orderVersion) {
         //操作redis
         CreateOrderTemporaryData createOrderTemporaryData = createOrderOperateProgramCacheResolution(programOrderCreateDto);
         //发送kafka
-        return doCreateV2(programOrderCreateDto,createOrderTemporaryData);
+        return doCreateV2(programOrderCreateDto,createOrderTemporaryData,orderVersion);
     }
     
     public CreateOrderTemporaryData createOrderOperateProgramCacheResolution(ProgramOrderCreateDto programOrderCreateDto){
@@ -304,8 +304,8 @@ public class ProgramOrderService {
         return new CreateOrderTemporaryData(identifierId,programCacheCreateOrderData.getPurchaseSeatList());
     }
     
-    private String doCreate(ProgramOrderCreateDto programOrderCreateDto,List<SeatVo> purchaseSeatList){
-        OrderCreateDto orderCreateDto = buildCreateOrderParam(programOrderCreateDto, purchaseSeatList);
+    private String doCreate(ProgramOrderCreateDto programOrderCreateDto,List<SeatVo> purchaseSeatList,Integer orderVersion){
+        OrderCreateDto orderCreateDto = buildCreateOrderParam(programOrderCreateDto, purchaseSeatList, orderVersion);
         
         String orderNumber = createOrderByRpc(orderCreateDto,purchaseSeatList);
         
@@ -316,9 +316,11 @@ public class ProgramOrderService {
         return orderNumber;
     }
     
-    private String doCreateV2(ProgramOrderCreateDto programOrderCreateDto,CreateOrderTemporaryData createOrderTemporaryData){
+    private String doCreateV2(ProgramOrderCreateDto programOrderCreateDto,
+                              CreateOrderTemporaryData createOrderTemporaryData,
+                              Integer orderVersion){
         OrderCreateDto orderCreateDto = buildCreateOrderParamV2(programOrderCreateDto.getProgramId(),
-                programOrderCreateDto.getUserId(), createOrderTemporaryData.getPurchaseSeatList());
+                programOrderCreateDto.getUserId(), createOrderTemporaryData.getPurchaseSeatList(),orderVersion);
         OrderCreateMq orderCreateMq = new OrderCreateMq();
         BeanUtils.copyProperties(orderCreateDto,orderCreateMq);
         orderCreateMq.setIdentifierId(createOrderTemporaryData.getIdentifierId());
@@ -342,7 +344,9 @@ public class ProgramOrderService {
         programRecordTaskMapper.insert(programRecordTask);
     }
     
-    private OrderCreateDto buildCreateOrderParam(ProgramOrderCreateDto programOrderCreateDto,List<SeatVo> purchaseSeatList){
+    private OrderCreateDto buildCreateOrderParam(ProgramOrderCreateDto programOrderCreateDto,
+                                                 List<SeatVo> purchaseSeatList,
+                                                 Integer orderVersion){
         ProgramVo programVo = programService.simpleGetProgramAndShowMultipleCache(programOrderCreateDto.getProgramId());
         OrderCreateDto orderCreateDto = new OrderCreateDto();
         orderCreateDto.setOrderNumber(uidGenerator.getOrderNumber(programOrderCreateDto.getUserId(),ORDER_TABLE_COUNT));
@@ -357,6 +361,7 @@ public class ProgramOrderService {
                 purchaseSeatList.stream().map(SeatVo::getPrice).reduce(BigDecimal.ZERO, BigDecimal::add);
         orderCreateDto.setOrderPrice(databaseOrderPrice);
         orderCreateDto.setCreateOrderTime(DateUtils.now());
+        orderCreateDto.setOrderVersion(orderVersion);
         
         List<Long> ticketUserIdList = programOrderCreateDto.getTicketUserIdList();
         List<OrderTicketUserCreateDto> orderTicketUserCreateDtoList = new ArrayList<>();
@@ -383,7 +388,7 @@ public class ProgramOrderService {
         return orderCreateDto;
     }
 
-    private OrderCreateDto buildCreateOrderParamV2(Long programId,Long userId,List<PurchaseSeat> purchaseSeatList){
+    private OrderCreateDto buildCreateOrderParamV2(Long programId,Long userId,List<PurchaseSeat> purchaseSeatList,Integer orderVersion){
         ProgramVo programVo = programService.simpleGetProgramAndShowMultipleCache(programId);
         OrderCreateDto orderCreateDto = new OrderCreateDto();
         orderCreateDto.setOrderNumber(uidGenerator.getOrderNumber(userId,ORDER_TABLE_COUNT));
@@ -398,6 +403,7 @@ public class ProgramOrderService {
                 purchaseSeatList.stream().map(PurchaseSeat::getPrice).reduce(BigDecimal.ZERO, BigDecimal::add);
         orderCreateDto.setOrderPrice(databaseOrderPrice);
         orderCreateDto.setCreateOrderTime(DateUtils.now());
+        orderCreateDto.setOrderVersion(orderVersion);
         
         List<OrderTicketUserCreateDto> orderTicketUserCreateDtoList = new ArrayList<>();
         for (PurchaseSeat purchaseSeat : purchaseSeatList) {

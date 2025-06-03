@@ -48,6 +48,7 @@ import com.damai.enums.DiscardOrderReason;
 import com.damai.enums.OrderStatus;
 import com.damai.enums.PayBillStatus;
 import com.damai.enums.PayChannel;
+import com.damai.enums.ProgramOrderVersion;
 import com.damai.enums.RecordType;
 import com.damai.enums.SellStatus;
 import com.damai.exception.DaMaiFrameException;
@@ -59,6 +60,7 @@ import com.damai.redis.RedisCache;
 import com.damai.redis.RedisKeyBuild;
 import com.damai.repeatexecutelimit.annotion.RepeatExecuteLimit;
 import com.damai.request.CustomizeRequestWrapper;
+import com.damai.service.delaysend.DelayOperateProgramDataSend;
 import com.damai.service.properties.OrderProperties;
 import com.damai.servicelock.LockType;
 import com.damai.servicelock.annotion.ServiceLock;
@@ -159,6 +161,9 @@ public class OrderService extends ServiceImpl<OrderMapper, Order> {
     
     @Autowired
     private OrderProgramMapper orderProgramMapper;
+    
+    @Autowired
+    private DelayOperateProgramDataSend delayOperateProgramDataSend;
 
     @Transactional(rollbackFor = Exception.class)
     public String create(OrderCreateDto orderCreateDto) {
@@ -415,7 +420,7 @@ public class OrderService extends ServiceImpl<OrderMapper, Order> {
         //如果不是取消或者支付操作，则直接抛出异常提示
         if (!(Objects.equals(orderStatus.getCode(), OrderStatus.CANCEL.getCode()) ||
                 Objects.equals(orderStatus.getCode(), OrderStatus.PAY.getCode()))) {
-            throw new DaMaiFrameException(BaseCode.OPERATE_ORDER_STATUS_NOT_PERMIT);
+            throw new DaMaiFrameException(  BaseCode.OPERATE_ORDER_STATUS_NOT_PERMIT);
         }
         //查询订单
         LambdaQueryWrapper<Order> orderLambdaQueryWrapper =
@@ -502,7 +507,8 @@ public class OrderService extends ServiceImpl<OrderMapper, Order> {
             seatMap.put(k,v.stream().map(OrderTicketUser::getSeatId).collect(Collectors.toList()));
         });
         //更新缓存和节目库相关数据
-        updateProgramRelatedDataResolution(programId,seatMap,orderStatus,order.getIdentifierId(),order.getUserId(),seatIdAndTicketUserIdDomainList);
+        updateProgramRelatedDataResolution(programId,seatMap,orderStatus,order.getIdentifierId(),order.getUserId(),
+                seatIdAndTicketUserIdDomainList,order.getOrderVersion());
     }
     
     public void checkOrderStatus(Order order){
@@ -523,7 +529,8 @@ public class OrderService extends ServiceImpl<OrderMapper, Order> {
     public void updateProgramRelatedDataResolution(Long programId,Map<Long,List<Long>> seatMap,
                                                    OrderStatus orderStatus,Long identifierId,
                                                    Long userId,
-                                                   List<SeatIdAndTicketUserIdDomain> seatIdAndTicketUserIdDomainList){
+                                                   List<SeatIdAndTicketUserIdDomain> seatIdAndTicketUserIdDomainList,
+                                                   Integer orderVersion){
         Map<Long, List<SeatVo>> seatVoMap = new HashMap<>(seatMap.size());
         //从redis中查询锁定中的座位
         seatMap.forEach((k,v) -> {
@@ -629,23 +636,35 @@ public class OrderService extends ServiceImpl<OrderMapper, Order> {
         data[2] = JSON.toJSONString(jsonArray);
         //座位id和对应的购票人id
         data[3] = JSON.toJSONString(seatIdAndTicketUserIdDomainList);
-        //更新节目服务的相关数据
-        if (Objects.equals(orderStatus.getCode(), OrderStatus.PAY.getCode()) || 
-                Objects.equals(orderStatus.getCode(), OrderStatus.CANCEL.getCode())) {
-            ProgramOperateDataDto programOperateDataDto = new ProgramOperateDataDto();
-            programOperateDataDto.setProgramId(programId);
-            programOperateDataDto.setSeatIdList(unLockSeatIdList);
-            programOperateDataDto.setTicketCategoryCountDtoList(ticketCategoryCountDtoList);
-            //如果是支付操作，那么座位状态就改为已售卖，如果是取消操作，那么座位状态就改为未售卖
-            programOperateDataDto.setSellStatus(Objects.equals(orderStatus.getCode(), OrderStatus.PAY.getCode()) 
-                    ? SellStatus.SOLD.getCode() : SellStatus.NO_SOLD.getCode());
-            ApiResponse<Boolean> programApiResponse = programClient.operateProgramData(programOperateDataDto);
-            if (!Objects.equals(programApiResponse.getCode(), BaseCode.SUCCESS.getCode())) {
-                throw new DaMaiFrameException(programApiResponse);
+        
+        ProgramOperateDataDto programOperateDataDto = new ProgramOperateDataDto();
+        programOperateDataDto.setProgramId(programId);
+        programOperateDataDto.setSeatIdList(unLockSeatIdList);
+        programOperateDataDto.setTicketCategoryCountDtoList(ticketCategoryCountDtoList);
+        programOperateDataDto.setOrderVersion(orderVersion);
+        //如果创建订单版本是v1，v2，v3
+        if (!orderVersion.equals(ProgramOrderVersion.V4_VERSION.getValue())){
+            orderProgramCacheResolutionOperate.programCacheReverseOperate(keys,data);
+            if (Objects.equals(orderStatus.getCode(), OrderStatus.PAY.getCode())) {
+                programOperateDataDto.setSellStatus(SellStatus.SOLD.getCode());
+                delayOperateProgramDataSend.sendMessage(JSON.toJSONString(programOperateDataDto));
             }
+        }else {
+            //如果创建订单版本是v4
+            //更新节目服务的相关数据
+            if (Objects.equals(orderStatus.getCode(), OrderStatus.PAY.getCode()) ||
+                    Objects.equals(orderStatus.getCode(), OrderStatus.CANCEL.getCode())) {
+                //如果是支付操作，那么座位状态就改为已售卖，如果是取消操作，那么座位状态就改为未售卖
+                programOperateDataDto.setSellStatus(Objects.equals(orderStatus.getCode(), OrderStatus.PAY.getCode())
+                        ? SellStatus.SOLD.getCode() : SellStatus.NO_SOLD.getCode());
+                ApiResponse<Boolean> programApiResponse = programClient.operateProgramData(programOperateDataDto);
+                if (!Objects.equals(programApiResponse.getCode(), BaseCode.SUCCESS.getCode())) {
+                    throw new DaMaiFrameException(programApiResponse);
+                }
+            }
+            //执行lua脚本
+            orderProgramCacheResolutionOperate.programCacheReverseOperate(keys,data);
         }
-        //执行lua脚本
-        orderProgramCacheResolutionOperate.programCacheReverseOperate(keys,data);
     }
     
     public List<OrderListVo> selectList(OrderListDto orderListDto) {

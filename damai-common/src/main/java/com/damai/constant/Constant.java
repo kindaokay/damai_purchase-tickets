@@ -44,4 +44,6 @@ public class Constant {
     
     public static final String INCREASE = RecordType.INCREASE.getValue();
     
+    public static final String SKY_WALKING_TRACE_ID = "skyWalkingTraceId";
+    
 }

@@ -43,7 +43,7 @@ public class ProgramOrderV4Strategy extends AbstractApplicationCommandLineRunner
     public String createOrder(ProgramOrderCreateDto programOrderCreateDto) {
         compositeContainer.execute(CompositeCheckType.PROGRAM_ORDER_CREATE_CHECK.getValue(),programOrderCreateDto);
         return baseProgramOrder.localLockCreateOrder(PROGRAM_ORDER_CREATE_V4,programOrderCreateDto,
-                () -> programOrderService.createNewAsync(programOrderCreateDto));
+                () -> programOrderService.createNewAsync(programOrderCreateDto,ProgramOrderVersion.V4_VERSION.getValue()));
     }
     
     @Override

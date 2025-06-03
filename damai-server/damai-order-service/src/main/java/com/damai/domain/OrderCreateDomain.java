@@ -43,4 +43,6 @@ public class OrderCreateDomain {
     
     private List<OrderTicketUserCreateDto> orderTicketUserCreateDtoList;
     
+    private Integer orderVersion;
+    
 }

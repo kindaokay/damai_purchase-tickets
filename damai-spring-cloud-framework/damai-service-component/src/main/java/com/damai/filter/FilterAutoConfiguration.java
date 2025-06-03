@@ -22,4 +22,10 @@ public class FilterAutoConfiguration {
     public BaseParameterFilter baseParameterFilter(){
         return new BaseParameterFilter();
     }
+    
+    @Bean
+    @Order(-1)
+    public SkyWalkingFilter skyWalkingFilter(){
+        return new SkyWalkingFilter();
+    }
 }

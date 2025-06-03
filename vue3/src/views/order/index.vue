@@ -168,8 +168,8 @@ const svg = `
         " style="stroke-width: 4px; fill: rgba(0, 0, 0, 0)"/>`
 const pollingTimer = ref(null);
 const timeoutTimer = ref(null);
-// 5s的时间（毫秒）
-const fiveSecond = 5000;
+// 10s的时间（毫秒）
+const tenSecond = 10000;
 
 //跳转后的接收值
 onMounted(()=>{
@@ -225,9 +225,9 @@ function getOrderCache(orderNumber){
 const startPolling = (orderNumber,startTime) => {
   pollingTimer.value = setInterval(() => {
     const currentTime = Date.now();
-    if (currentTime - startTime >= fiveSecond) {
+    if (currentTime - startTime >= tenSecond) {
       stopPolling();
-      //1. 大于5秒，此订单被舍弃，显示排队弹框
+      //1. 大于10秒，此订单被舍弃，显示排队弹框
       //2. loading弹出框关闭
       loadingClose();
       //3. 排队弹框显示
@@ -348,12 +348,12 @@ function submitOrder(){
         console.log('异步订单创建成功 订单编号',response.data)
         //开始定时轮训查询
         startPolling(response.data,Date.now());
-        // 设置一个5s后停止轮询的定时器
+        // 设置一个10s后停止轮询的定时器
         timeoutTimer.value = setTimeout(() => {
           if (pollingTimer.value) {
             stopPolling();
           }
-        }, fiveSecond);
+        }, tenSecond);
       }else{
         dialogShow();
       }

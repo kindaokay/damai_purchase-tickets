@@ -31,4 +31,8 @@ public class ProgramOperateDataDto {
     @Schema(name ="sellStatus", type ="Long", description ="座位状态",requiredMode= RequiredMode.REQUIRED)
     @NotNull
     private Integer sellStatus;
+    
+    @Schema(name ="orderVersion", type ="Long", description ="创建订单时的版本",requiredMode= RequiredMode.REQUIRED)
+    @NotNull
+    private Integer orderVersion;
 }

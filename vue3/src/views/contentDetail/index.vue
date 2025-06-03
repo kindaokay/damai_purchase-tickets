@@ -257,7 +257,8 @@ function getProgramDetialsList() {
     ticketCategoryVoList.value = detailList.value.ticketCategoryVoList
     countPrice.value=ticketCategoryVoList.value[0].price
     ticketCategoryId.value = ticketCategoryVoList.value[0].id
-    allPrice.value = ''
+    allPrice.value = countPrice.value * num.value; // 初始总价 = 默认单价 × 默认数量（1）
+    // allPrice.value = ''      原始代码
     ticketNeedInfo.value = [{
       name: '限购规则',
       value: detailList.value.purchaseLimitRule,
@@ -306,9 +307,13 @@ function getProgramDetialsList() {
 }
 
 const ticketClick = (item, index) => {
-  actvieIndex.value = index
-  allPrice.value = item.price
-  ticketCategoryId.value = item.id
+    actvieIndex.value = index;
+    countPrice.value = item.price; // 显式更新单价
+    allPrice.value = item.price * num.value; // 总价 = 新单价 × 当前数量
+    ticketCategoryId.value = item.id;
+    // actvieIndex.value = index     原本代码
+    // allPrice.value = item.price      原本代码
+    // ticketCategoryId.value = item.id      原本代码
 }
 const detialClick = (url, index) => {
   menuActive.value = index
