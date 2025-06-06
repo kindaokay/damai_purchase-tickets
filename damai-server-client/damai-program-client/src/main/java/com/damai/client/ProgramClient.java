@@ -1,17 +1,14 @@
 package com.damai.client;
 
 import com.damai.common.ApiResponse;
-import com.damai.dto.ProgramOperateDataDto;
-import com.damai.dto.ProgramRecordTaskAddDto;
-import com.damai.dto.ProgramRecordTaskListDto;
-import com.damai.dto.ProgramRecordTaskUpdateDto;
-import com.damai.dto.ReduceRemainNumberDto;
-import com.damai.dto.TicketCategoryListDto;
+import com.damai.dto.*;
 import com.damai.vo.ProgramRecordTaskVo;
 import com.damai.vo.TicketCategoryDetailVo;
+import jakarta.validation.Valid;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.stereotype.Component;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 
 import java.util.List;
 
@@ -80,4 +77,12 @@ public interface ProgramClient {
      */
     @PostMapping(value = "/program/interior/operate/program/data")
     ApiResponse<Boolean> operateProgramData(ProgramOperateDataDto programOperateDataDto);
+
+    /**
+     * 查询票档集合(通过节目查询)
+     * @param ticketCategoryListByProgramDto 参数
+     * @return 结果
+     * */
+    @PostMapping(value = "/ticket/category/select/list/by/program")
+    ApiResponse<List<TicketCategoryDetailVo>> selectListByProgram(TicketCategoryListByProgramDto ticketCategoryListByProgramDto);
 }

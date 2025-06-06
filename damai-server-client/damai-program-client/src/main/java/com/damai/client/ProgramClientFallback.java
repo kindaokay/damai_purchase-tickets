@@ -1,12 +1,7 @@
 package com.damai.client;
 
 import com.damai.common.ApiResponse;
-import com.damai.dto.ProgramOperateDataDto;
-import com.damai.dto.ProgramRecordTaskAddDto;
-import com.damai.dto.ProgramRecordTaskListDto;
-import com.damai.dto.ProgramRecordTaskUpdateDto;
-import com.damai.dto.ReduceRemainNumberDto;
-import com.damai.dto.TicketCategoryListDto;
+import com.damai.dto.*;
 import com.damai.enums.BaseCode;
 import com.damai.vo.ProgramRecordTaskVo;
 import com.damai.vo.TicketCategoryDetailVo;
@@ -54,6 +49,11 @@ public class ProgramClientFallback implements ProgramClient {
     
     @Override
     public ApiResponse<Boolean> operateProgramData(final ProgramOperateDataDto programOperateDataDto) {
+        return ApiResponse.error(BaseCode.SYSTEM_ERROR);
+    }
+
+    @Override
+    public ApiResponse<List<TicketCategoryDetailVo>> selectListByProgram(TicketCategoryListByProgramDto ticketCategoryListByProgramDto) {
         return ApiResponse.error(BaseCode.SYSTEM_ERROR);
     }
 }

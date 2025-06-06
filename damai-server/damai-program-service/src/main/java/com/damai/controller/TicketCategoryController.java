@@ -3,6 +3,7 @@ package com.damai.controller;
 import com.damai.common.ApiResponse;
 import com.damai.dto.TicketCategoryAddDto;
 import com.damai.dto.TicketCategoryDto;
+import com.damai.dto.TicketCategoryListByProgramDto;
 import com.damai.dto.TicketCategoryListDto;
 import com.damai.service.TicketCategoryService;
 import com.damai.vo.TicketCategoryDetailVo;
@@ -47,5 +48,11 @@ public class TicketCategoryController {
     @PostMapping(value = "/select/list")
     public ApiResponse<List<TicketCategoryDetailVo>> selectList(@Valid @RequestBody TicketCategoryListDto ticketCategoryDto) {
         return ApiResponse.ok(ticketCategoryService.selectList(ticketCategoryDto));
+    }
+
+    @Operation(summary  = "查询集合")
+    @PostMapping(value = "/select/list/by/program")
+    public ApiResponse<List<TicketCategoryDetailVo>> selectListByProgram(@Valid @RequestBody TicketCategoryListByProgramDto ticketCategoryListByProgramDto) {
+        return ApiResponse.ok(ticketCategoryService.selectListByProgram(ticketCategoryListByProgramDto));
     }
 }
