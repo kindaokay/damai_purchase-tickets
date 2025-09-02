@@ -254,7 +254,9 @@ public enum BaseCode {
     
     NOT_FOUND_GENE(70003,"没有找到基因"),
     
-    MAX_RETRY_COUNT(70004,"添加记录流水失败超过最大重试次数")
+    MAX_RETRY_COUNT(70004,"添加记录流水失败超过最大重试次数"),
+    
+    SERVICE_LOCK_FAIL(70005,"分布式锁加锁失败"),
     ;
     
     private final Integer code;
