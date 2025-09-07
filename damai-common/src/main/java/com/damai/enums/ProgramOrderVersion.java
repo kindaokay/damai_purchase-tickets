@@ -12,10 +12,16 @@ public enum ProgramOrderVersion {
     V1_VERSION("v1","v1版本",1),
     
     V2_VERSION("v2","v2版本",2),
+    
+    V21_VERSION("v2","v21版本",21),
    
     V3_VERSION("v3","v3版本",3),
     
+    V31_VERSION("v3","v31版本",31),
+    
     V4_VERSION("v4","v4版本",4),
+    
+    V41_VERSION("v4","v41版本",41),
     ;
 
     private final String version;

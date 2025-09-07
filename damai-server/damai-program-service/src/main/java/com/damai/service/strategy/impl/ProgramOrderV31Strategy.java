@@ -14,16 +14,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.stereotype.Component;
 
-import static com.damai.core.DistributedLockConstants.PROGRAM_ORDER_CREATE_V4;
-
 /**
  * @program: 极度真实还原大麦网高并发实战项目。 添加 阿星不是程序员 微信，添加时备注 大麦 来获取项目的完整资料 
- * @description: 节目订单v4
+ * @description: 节目订单v3
  * @author: 阿星不是程序员
  **/
 @Slf4j
 @Component
-public class ProgramOrderV4Strategy extends AbstractApplicationCommandLineRunnerHandler implements ProgramOrderStrategy {
+public class ProgramOrderV31Strategy extends AbstractApplicationCommandLineRunnerHandler implements ProgramOrderStrategy {
     
     @Autowired
     private ProgramOrderService programOrderService;
@@ -40,17 +38,16 @@ public class ProgramOrderV4Strategy extends AbstractApplicationCommandLineRunner
     @Override
     public String createOrder(ProgramOrderCreateDto programOrderCreateDto) {
         compositeContainer.execute(CompositeCheckType.PROGRAM_ORDER_CREATE_CHECK.getValue(),programOrderCreateDto);
-        return baseProgramOrder.localLockCreateOrder(PROGRAM_ORDER_CREATE_V4,programOrderCreateDto,
-                () -> programOrderService.createNewAsync(programOrderCreateDto,ProgramOrderVersion.V4_VERSION.getValue()));
+        return programOrderService.createNew(programOrderCreateDto,ProgramOrderVersion.V31_VERSION.getValue());
     }
     
     @Override
     public Integer executeOrder() {
-        return 4;
+        return 3;
     }
     
     @Override
     public void executeInit(final ConfigurableApplicationContext context) {
-        ProgramOrderContext.add(ProgramOrderVersion.V4_VERSION.getVersion(),this);
+        ProgramOrderContext.add(ProgramOrderVersion.V31_VERSION.getVersion(),this);
     }
 }

@@ -51,7 +51,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -435,12 +434,11 @@ public class ProgramOrderService {
     
     private String createOrderByMq(OrderCreateMq orderCreateMq,List<PurchaseSeat> purchaseSeatList){
         CreateOrderMqDomain createOrderMqDomain = new CreateOrderMqDomain();
-        CountDownLatch latch = new CountDownLatch(1);
+        //CountDownLatch latch = new CountDownLatch(1);
+        createOrderMqDomain.orderNumber = String.valueOf(orderCreateMq.getOrderNumber());
         createOrderSend.sendMessage(JSON.toJSONString(orderCreateMq),sendResult -> {
-            createOrderMqDomain.orderNumber = String.valueOf(orderCreateMq.getOrderNumber());
-            assert sendResult != null;
-            log.info("创建订单kafka发送消息成功 topic : {}",sendResult.getRecordMetadata().topic());
-            latch.countDown();
+            //log.info("创建订单kafka发送消息成功 topic : {}",sendResult.getRecordMetadata().topic());
+            //latch.countDown();
         },ex -> {
             log.error("创建订单kafka发送消息失败 error",ex);
             List<SeatVo> purchaseSeatVoList = purchaseSeatList.stream().map(purchaseSeat -> {
@@ -450,17 +448,17 @@ public class ProgramOrderService {
             }).collect(Collectors.toList());
             updateProgramCacheDataResolution(orderCreateMq.getProgramId(),purchaseSeatVoList,OrderStatus.CANCEL);
             createOrderMqDomain.daMaiFrameException = new DaMaiFrameException(ex);
-            latch.countDown();
+            //latch.countDown();
         });
-        try {
-            latch.await();
-        } catch (InterruptedException e) {
-            log.error("createOrderByMq InterruptedException",e);
-            throw new DaMaiFrameException(e);
-        }
-        if (Objects.nonNull(createOrderMqDomain.daMaiFrameException)) {
-            throw createOrderMqDomain.daMaiFrameException;
-        }
+//        try {
+//            latch.await();
+//        } catch (InterruptedException e) {
+//            log.error("createOrderByMq InterruptedException",e);
+//            throw new DaMaiFrameException(e);
+//        }
+//        if (Objects.nonNull(createOrderMqDomain.daMaiFrameException)) {
+//            throw createOrderMqDomain.daMaiFrameException;
+//        }
         return createOrderMqDomain.orderNumber;
     }
     

@@ -1,6 +1,15 @@
 #服务端口
 server:
   port: 8081
+  # Tomcat线程池配置优化(订单服务高负载)
+  tomcat:
+    threads:
+      max: 500                    # 最大工作线程数(订单服务负载更高)
+      min-spare: 80               # 最小空闲线程数
+    max-connections: 10000        # 最大连接数
+    accept-count: 300             # 等待队列长度
+    connection-timeout: 30000     # 连接超时时间(30秒)
+    max-http-header-size: 8192    # HTTP头最大大小
 # 应用名称
 spring:
   profiles:
@@ -27,7 +36,13 @@ spring:
       database: 0
       host: 127.0.0.1
       port: 6379
-      timeout: 3000
+      timeout: 5000                     # 连接超时时间(5秒)
+      jedis:
+        pool:
+          max-active: 600               # 最大活跃连接数(订单服务负载高)
+          max-idle: 120                 # 最大空闲连接数
+          min-idle: 30                  # 最小空闲连接数
+          max-wait: 3000                # 最大等待时间(3秒)
   cloud:
     nacos:
       discovery:
@@ -96,9 +111,9 @@ jasypt:
     algorithm: PBEWithMD5AndDES
 delay:
   queue:
-    corePoolSize: 12
-    maximumPoolSize: 24
-    isolationRegionCount: 4
+    corePoolSize: 20                    # 核心线程数(订单服务负载更高)
+    maximumPoolSize: 40                 # 最大线程数
+    isolationRegionCount: 8             # 隔离区域数量(提升并发)
 springdoc:
   swagger-ui:
     path: /swagger-ui.html

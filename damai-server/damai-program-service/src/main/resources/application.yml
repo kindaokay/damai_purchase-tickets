@@ -6,6 +6,18 @@ server:
       charset: UTF-8
       enabled: true
       force: true
+  # Tomcat线程池配置优化 - 针对每秒500请求压测
+  tomcat:
+    threads:
+      max: 800                    # 最大工作线程数(提升至800应对高并发)
+      min-spare: 100              # 最小空闲线程数(提前准备更多线程)
+    max-connections: 12000        # 最大连接数(大幅提升)
+    accept-count: 500             # 等待队列长度(增加至500)
+    connection-timeout: 20000     # 连接超时时间(缩短至20秒)
+    max-http-header-size: 8192    # HTTP头最大大小
+    # 额外的高并发优化配置
+    max-swallow-size: -1          # 禁用请求体大小限制
+    max-http-form-post-size: -1   # 禁用POST表单大小限制
 # 应用名称
 spring:
   profiles:
@@ -15,6 +27,17 @@ spring:
   main:
     allow-bean-definition-overriding: true
     allow-circular-references: true
+  # 高并发优化配置
+  task:
+    execution:
+      pool:
+        core-size: 50               # 异步任务核心线程数
+        max-size: 200               # 异步任务最大线程数
+        queue-capacity: 1000        # 异步任务队列容量
+        keep-alive: 60s             # 线程空闲时间
+    scheduling:
+      pool:
+        size: 20                    # 定时任务线程池大小
   mvc:
     pathmatch:
       matching-strategy: ant_path_matcher
@@ -33,10 +56,13 @@ spring:
       database: 0
       host: 127.0.0.1
       port: 6379
-      timeout: 3000
+      timeout: 5000                     # 连接超时时间(5秒)
       jedis:
         pool:
-          max-active: 300  
+          max-active: 500               # 最大活跃连接数
+          max-idle: 100                 # 最大空闲连接数
+          min-idle: 20                  # 最小空闲连接数
+          max-wait: 3000                # 最大等待时间(3秒)
       stream:
         streamName: invalid_program
         consumerType: broadcast
@@ -66,9 +92,9 @@ mybatis-plus:
       logic-delete-field: status
       logic-delete-value: 0
       logic-not-delete-value: 1
-  configuration:
-    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
-    local-cache-scope: statement
+#  configuration:
+#    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+#    local-cache-scope: statement
 feign:
   sentinel:
     enabled: false
@@ -107,9 +133,9 @@ elasticsearch:
   passWord: elastic
 delay:
   queue:
-    corePoolSize: 1
-    maximumPoolSize: 1
-    isolationRegionCount: 4
+    corePoolSize: 8                     # 核心线程数(提升并发处理能力)
+    maximumPoolSize: 16                 # 最大线程数
+    isolationRegionCount: 8             # 隔离区域数量(提升并发)
 springdoc:
   swagger-ui:
     path: /swagger-ui.html

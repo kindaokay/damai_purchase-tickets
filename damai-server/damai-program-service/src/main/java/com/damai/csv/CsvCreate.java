@@ -70,13 +70,13 @@ public class CsvCreate {
      * */
     public static Map<String,Integer> createData(){
         Map<String,Integer> map = new HashMap<>(10);
-        map.put("46",400);
-        map.put("45",400);
-        map.put("44",700);
-        map.put("43",700);
-        map.put("42",700);
-        map.put("41",700);
-        map.put("40",400);
+        map.put("46",10000);
+        map.put("45",10000);
+        map.put("44",10000);
+        map.put("43",15000);
+        map.put("42",15000);
+        map.put("41",20000);
+        map.put("40",20000);
         return map;
     }
 }

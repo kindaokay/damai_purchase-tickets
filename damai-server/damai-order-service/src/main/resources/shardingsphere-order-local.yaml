@@ -6,7 +6,13 @@ dataSources:
     username: root
     password: root
     hikari:
-      max-lifetime: 60000
+      # 连接池配置优化
+      minimum-idle: 15                    # 最小空闲连接数(订单服务负载较高)
+      maximum-pool-size: 80               # 最大连接池大小(订单服务负载较高)
+      connection-timeout: 30000           # 连接超时时间(30秒)
+      idle-timeout: 600000                # 空闲连接超时时间(10分钟)
+      max-lifetime: 1800000               # 连接最大生命周期(30分钟)
+      leak-detection-threshold: 60000     # 连接泄漏检测阈值(60秒)
   ds_1:
     dataSourceClassName: com.zaxxer.hikari.HikariDataSource
     driverClassName: com.mysql.cj.jdbc.Driver
@@ -14,7 +20,13 @@ dataSources:
     username: root
     password: root
     hikari:
-      max-lifetime: 60000
+      # 连接池配置优化
+      minimum-idle: 15                    # 最小空闲连接数(订单服务负载较高)
+      maximum-pool-size: 80               # 最大连接池大小(订单服务负载较高)
+      connection-timeout: 30000           # 连接超时时间(30秒)
+      idle-timeout: 600000                # 空闲连接超时时间(10分钟)
+      max-lifetime: 1800000               # 连接最大生命周期(30分钟)
+      leak-detection-threshold: 60000     # 连接泄漏检测阈值(60秒)
 
 rules:
   - !SHARDING
@@ -110,4 +122,4 @@ rules:
         props:
           sharding-count: 2
 props:
-  sql-show: true
+  sql-show: false

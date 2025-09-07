@@ -1,6 +1,15 @@
 #服务端口
 server:
   port: 6082
+  # Tomcat线程池配置优化
+  tomcat:
+    threads:
+      max: 300                    # 最大工作线程数
+      min-spare: 40               # 最小空闲线程数
+    max-connections: 6000         # 最大连接数
+    accept-count: 150             # 等待队列长度
+    connection-timeout: 30000     # 连接超时时间(30秒)
+    max-http-header-size: 8192    # HTTP头最大大小
 # 应用名称
 spring:
   profiles:
@@ -27,7 +36,13 @@ spring:
       database: 0
       host: 127.0.0.1
       port: 6379
-      timeout: 3000
+      timeout: 5000                     # 连接超时时间(5秒)
+      jedis:
+        pool:
+          max-active: 400               # 最大活跃连接数
+          max-idle: 80                  # 最大空闲连接数
+          min-idle: 15                  # 最小空闲连接数
+          max-wait: 3000                # 最大等待时间(3秒)
   cloud:
     nacos:
       discovery:

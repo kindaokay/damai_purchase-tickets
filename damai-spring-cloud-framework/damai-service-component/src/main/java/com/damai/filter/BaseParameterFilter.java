@@ -54,7 +54,7 @@ public class BaseParameterFilter extends OncePerRequestFilter {
                 BaseParameterHolder.setParameter(CODE,code);
                 MDC.put(CODE,code);
             }
-            log.info("current api : {} requestBody : {}",request.getRequestURI(), requestBody);
+            //log.info("current api : {} requestBody : {}",request.getRequestURI(), requestBody);
             filterChain.doFilter(request, response);
         }finally {
             BaseParameterHolder.removeParameter(TRACE_ID);

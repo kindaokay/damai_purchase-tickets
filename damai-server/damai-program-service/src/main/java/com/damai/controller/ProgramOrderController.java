@@ -36,6 +36,13 @@ public class ProgramOrderController {
                 .createOrder(programOrderCreateDto));
     }
     
+    @Operation(summary  = "购票V21")
+    @PostMapping(value = "/create/v21")
+    public ApiResponse<String> createV21(@Valid @RequestBody ProgramOrderCreateDto programOrderCreateDto) {
+        return ApiResponse.ok(ProgramOrderContext.get(ProgramOrderVersion.V21_VERSION.getVersion())
+                .createOrder(programOrderCreateDto));
+    }
+    
     @Operation(summary  = "购票V3")
     @PostMapping(value = "/create/v3")
     public ApiResponse<String> createV3(@Valid @RequestBody ProgramOrderCreateDto programOrderCreateDto) {
@@ -43,10 +50,24 @@ public class ProgramOrderController {
                 .createOrder(programOrderCreateDto));
     }
     
+    @Operation(summary  = "购票V31")
+    @PostMapping(value = "/create/v31")
+    public ApiResponse<String> createV31(@Valid @RequestBody ProgramOrderCreateDto programOrderCreateDto) {
+        return ApiResponse.ok(ProgramOrderContext.get(ProgramOrderVersion.V31_VERSION.getVersion())
+                .createOrder(programOrderCreateDto));
+    }
+    
     @Operation(summary  = "购票V4")
     @PostMapping(value = "/create/v4")
     public ApiResponse<String> createV4(@Valid @RequestBody ProgramOrderCreateDto programOrderCreateDto) {
         return ApiResponse.ok(ProgramOrderContext.get(ProgramOrderVersion.V4_VERSION.getVersion())
+                .createOrder(programOrderCreateDto));
+    }
+    
+    @Operation(summary  = "购票V4")
+    @PostMapping(value = "/create/v41")
+    public ApiResponse<String> createV41(@Valid @RequestBody ProgramOrderCreateDto programOrderCreateDto) {
+        return ApiResponse.ok(ProgramOrderContext.get(ProgramOrderVersion.V41_VERSION.getVersion())
                 .createOrder(programOrderCreateDto));
     }
 }
