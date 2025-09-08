@@ -53,6 +53,8 @@ public enum BaseCode {
     
     EMAIL_ERROR_COUNT_TOO_MANY(519,"邮箱输入错误次数过多，请稍后重试"),
     
+    USER_NOT_LOGIN(1001,"用户未登录"),
+    
     RSA_SIGN_ERROR(10000,"rsa签名验证失败"),
     
     RSA_DECRYPT_ERROR(10001,"rsa解密失败"),

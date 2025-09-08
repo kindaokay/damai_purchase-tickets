@@ -1,0 +1,65 @@
+package com.damai.service;
+
+import cn.dev33.satoken.session.SaSession;
+import cn.dev33.satoken.stp.StpUtil;
+import com.alibaba.fastjson2.JSON;
+import com.damai.dto.BackManageLoginDto;
+import com.damai.exception.DaMaiFrameException;
+import com.damai.properties.BackManageProperties;
+import com.damai.vo.BackManageLoginVo;
+import com.damai.vo.BackManageUserDetailVo;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+/**
+ * @program: 极度真实还原大麦网高并发实战项目。 添加 阿星不是程序员 微信，添加时备注 大麦 来获取项目的完整资料 
+ * @description: 后台管理登录 service
+ * @author: 阿星不是程序员
+ **/
+@Service
+public class BackManageUserService {
+    
+    @Autowired
+    private BackManageProperties backManageProperties;
+    
+
+    public BackManageLoginVo login(BackManageLoginDto backManageLoginDto){
+        //验证用户信息
+        verifyUser(backManageLoginDto);
+        //登录
+        StpUtil.login(backManageLoginDto.getUsername());
+        SaSession session = StpUtil.getSession();
+        BackManageUserDetailVo backManageUserDetailVo = new BackManageUserDetailVo();
+        backManageUserDetailVo.setUserId("1");
+        backManageUserDetailVo.setHomePath("/");
+        backManageUserDetailVo.setRealName("阿星不是程序员");
+        backManageUserDetailVo.setDesc("javaup@yeah.net");
+        backManageUserDetailVo.setUsername(backManageLoginDto.getUsername());
+        backManageUserDetailVo.setAvatar("https://multimedia-javaup.cn/%E6%95%B0%E6%8D%AE%E4%B8%AD%E5%8F%B0/avatar-logo.png");
+        session.set("userDetail", JSON.toJSONString(backManageUserDetailVo));
+        BackManageLoginVo backManageLoginVo = new BackManageLoginVo();
+        backManageLoginVo.setId("1");
+        backManageLoginVo.setRealName("阿星不是程序员");
+        backManageLoginVo.setUsername(backManageLoginDto.getUsername());
+        backManageLoginVo.setPassword(backManageLoginDto.getPassword());
+        backManageLoginVo.setAccessToken(StpUtil.getTokenValue());
+        return backManageLoginVo;
+    }
+    
+    public BackManageUserDetailVo userInfo() {
+        Object userDetailObj = StpUtil.getSession().get("userDetail");
+        if (userDetailObj == null) {
+            throw new DaMaiFrameException("用户未登录或登录已过期");
+        }
+        return JSON.parseObject(String.valueOf(userDetailObj), BackManageUserDetailVo.class);
+    }
+    
+    public void verifyUser(BackManageLoginDto backManageLoginDto){
+        if (!backManageProperties.getUsername().equals(backManageLoginDto.getUsername())) {
+            throw new DaMaiFrameException("用户名错误");
+        }
+        if (!backManageProperties.getPassword().equals(backManageLoginDto.getPassword())) {
+            throw new DaMaiFrameException("用户密码错误");
+        }
+    }
+}

@@ -81,4 +81,13 @@ public enum RecordType {
         }
         return Integer.MIN_VALUE;
     }
+    
+    public static String getMsgByValue(String value) {
+        for (RecordType re : RecordType.values()) {
+            if (Objects.equals(re.value, value)) {
+                return re.msg;
+            }
+        }
+        return "";
+    }
 }

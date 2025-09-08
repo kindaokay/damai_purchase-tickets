@@ -53,6 +53,12 @@ public class AreaController {
         return ApiResponse.ok(areaService.current());
     }
     
+    @Operation(summary  = "用户后台系统显示的城市列表")
+    @PostMapping(value = "/manage/list")
+    public ApiResponse<List<AreaVo>> manageList(){
+        return ApiResponse.ok(areaService.manageList());
+    }
+    
     @Operation(summary  = "热门城市")
     @PostMapping(value = "/hot")
     public ApiResponse<List<AreaVo>> hot() {

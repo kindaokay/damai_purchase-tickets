@@ -92,6 +92,7 @@
 		<opencsv.version>5.9</opencsv.version>
 		<skywalking.apm-toolkit-trace.version>9.4.0</skywalking.apm-toolkit-trace.version>
 		<skywalking.apm-toolkit-log4j-2.x.version>9.4.0</skywalking.apm-toolkit-log4j-2.x.version>
+		<sa-token.version>1.43.0</sa-token.version>
 	</properties>
 	<dependencies>
 		<dependency>
