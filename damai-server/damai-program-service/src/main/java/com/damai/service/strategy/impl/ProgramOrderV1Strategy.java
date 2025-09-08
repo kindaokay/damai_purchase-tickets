@@ -1,10 +1,12 @@
 package com.damai.service.strategy.impl;
 
+import com.damai.core.RepeatExecuteLimitConstants;
 import com.damai.dto.ProgramOrderCreateDto;
 import com.damai.enums.CompositeCheckType;
 import com.damai.enums.ProgramOrderVersion;
 import com.damai.initialize.base.AbstractApplicationCommandLineRunnerHandler;
 import com.damai.initialize.impl.composite.CompositeContainer;
+import com.damai.repeatexecutelimit.annotion.RepeatExecuteLimit;
 import com.damai.service.ProgramOrderService;
 import com.damai.service.strategy.ProgramOrderContext;
 import com.damai.service.strategy.ProgramOrderStrategy;
@@ -30,9 +32,9 @@ public class ProgramOrderV1Strategy extends AbstractApplicationCommandLineRunner
     private CompositeContainer compositeContainer;
     
     
-//    @RepeatExecuteLimit(
-//            name = RepeatExecuteLimitConstants.CREATE_PROGRAM_ORDER,
-//            keys = {"#programOrderCreateDto.userId","#programOrderCreateDto.programId"})
+    @RepeatExecuteLimit(
+            name = RepeatExecuteLimitConstants.CREATE_PROGRAM_ORDER,
+            keys = {"#programOrderCreateDto.userId","#programOrderCreateDto.programId"})
     @ServiceLock(name = PROGRAM_ORDER_CREATE_V1,keys = {"#programOrderCreateDto.programId"})
     @Override
     public String createOrder(final ProgramOrderCreateDto programOrderCreateDto) {

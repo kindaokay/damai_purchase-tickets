@@ -2,6 +2,7 @@ package com.damai.service.strategy.impl;
 
 import cn.hutool.core.collection.CollectionUtil;
 import cn.hutool.core.util.StrUtil;
+import com.damai.core.RepeatExecuteLimitConstants;
 import com.damai.dto.ProgramOrderCreateDto;
 import com.damai.dto.SeatDto;
 import com.damai.enums.CompositeCheckType;
@@ -9,6 +10,7 @@ import com.damai.enums.ProgramOrderVersion;
 import com.damai.initialize.base.AbstractApplicationCommandLineRunnerHandler;
 import com.damai.initialize.impl.composite.CompositeContainer;
 import com.damai.locallock.LocalLockCache;
+import com.damai.repeatexecutelimit.annotion.RepeatExecuteLimit;
 import com.damai.service.ProgramOrderService;
 import com.damai.service.strategy.ProgramOrderContext;
 import com.damai.service.strategy.ProgramOrderStrategy;
@@ -49,9 +51,9 @@ public class ProgramOrderV21Strategy extends AbstractApplicationCommandLineRunne
     private LocalLockCache localLockCache;
     
     
-//    @RepeatExecuteLimit(
-//            name = RepeatExecuteLimitConstants.CREATE_PROGRAM_ORDER,
-//            keys = {"#programOrderCreateDto.userId","#programOrderCreateDto.programId"})
+    @RepeatExecuteLimit(
+            name = RepeatExecuteLimitConstants.CREATE_PROGRAM_ORDER,
+            keys = {"#programOrderCreateDto.userId","#programOrderCreateDto.programId"})
     @Override
     public String createOrder(ProgramOrderCreateDto programOrderCreateDto) {
         compositeContainer.execute(CompositeCheckType.PROGRAM_ORDER_CREATE_CHECK.getValue(),programOrderCreateDto);
