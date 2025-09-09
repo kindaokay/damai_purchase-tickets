@@ -2,8 +2,11 @@ package com.damai.controller;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.damai.common.ApiResponse;
+import com.damai.dto.OrderPageManageDto;
 import com.damai.dto.RecordManageDto;
 import com.damai.service.OrderManageService;
+import com.damai.vo.DiscardOrderManageVo;
+import com.damai.vo.OrderManageVo;
 import com.damai.vo.RecordOrderManageVo;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -29,9 +32,21 @@ public class OrderManageController {
 
     
 
-    @Operation(summary  = "对账分页列表")
-    @PostMapping(value = "/reconciliation/page")
-    public ApiResponse<IPage<RecordOrderManageVo>> reconciliationList(@Valid @RequestBody RecordManageDto recordManageDto) {
-        return ApiResponse.ok(orderManageService.reconciliationList(recordManageDto));
+    @Operation(summary  = "操作记录分页列表")
+    @PostMapping(value = "/record/page")
+    public ApiResponse<IPage<RecordOrderManageVo>> recordPage(@Valid @RequestBody RecordManageDto recordManageDto) {
+        return ApiResponse.ok(orderManageService.recordPage(recordManageDto));
+    }
+    
+    @Operation(summary  = "查看订单分页列表")
+    @PostMapping(value = "/order/page")
+    public ApiResponse<IPage<OrderManageVo>> orderPage(@Valid @RequestBody OrderPageManageDto orderPageManageDto) {
+        return ApiResponse.ok(orderManageService.orderPage(orderPageManageDto));
+    }
+    
+    @Operation(summary  = "查看废弃订单分页列表")
+    @PostMapping(value = "/discard/order/page")
+    public ApiResponse<IPage<DiscardOrderManageVo>> discardOrderPage(@Valid @RequestBody OrderPageManageDto orderPageManageDto) {
+        return ApiResponse.ok(orderManageService.discardOrderPage(orderPageManageDto));
     }
 }

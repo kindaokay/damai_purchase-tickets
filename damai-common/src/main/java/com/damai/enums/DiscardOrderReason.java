@@ -9,7 +9,7 @@ public enum DiscardOrderReason {
     /**
      * 废弃订单类型
      * */
-    CONSUMER_DELAY(1,"延时"),
+    CONSUMER_DELAY(1,"mq消费消息延时"),
     
     MODIFY_PROGRAM_REMAIN_NUMBER_SEAT_FAIL(2,"修改节目服务的余票和座位失败"),
     ;

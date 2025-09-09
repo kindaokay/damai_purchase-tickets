@@ -6,24 +6,35 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.damai.core.RedisKeyManage;
+import com.damai.domain.DiscardOrder;
 import com.damai.domain.ProgramRecord;
 import com.damai.domain.SeatRecord;
 import com.damai.domain.TicketCategoryRecord;
+import com.damai.dto.OrderPageManageDto;
+import com.damai.dto.OrderTicketUserCreateDto;
 import com.damai.dto.RecordManageDto;
 import com.damai.entity.Order;
 import com.damai.entity.OrderProgram;
+import com.damai.entity.OrderTicketUser;
 import com.damai.entity.OrderTicketUserRecord;
+import com.damai.enums.DiscardOrderReason;
+import com.damai.enums.OrderStatus;
 import com.damai.enums.ReconciliationStatus;
 import com.damai.enums.RecordType;
 import com.damai.enums.SellStatus;
 import com.damai.mapper.OrderMapper;
 import com.damai.mapper.OrderProgramMapper;
+import com.damai.mapper.OrderTicketUserMapper;
 import com.damai.mapper.OrderTicketUserRecordMapper;
 import com.damai.page.PageUtil;
 import com.damai.redis.RedisCache;
 import com.damai.redis.RedisKeyBuild;
 import com.damai.util.DateUtils;
 import com.damai.util.StringUtil;
+import com.damai.vo.DiscardOrderManageVo;
+import com.damai.vo.DiscardOrderTicketUserManageVo;
+import com.damai.vo.OrderManageVo;
+import com.damai.vo.OrderTicketUserManageVo;
 import com.damai.vo.RecordOrderManageVo;
 import com.damai.vo.RecordOrderTickerUserManageVo;
 import com.damai.vo.TicketCategoryVo;
@@ -33,7 +44,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -41,6 +51,11 @@ import java.util.stream.Collectors;
 
 import static com.damai.constant.Constant.GLIDE_LINE;
 
+/**
+ * @program: 极度真实还原大麦网高并发实战项目。 添加 阿星不是程序员 微信，添加时备注 大麦 来获取项目的完整资料 
+ * @description: 订单后台管理 service
+ * @author: 阿星不是程序员
+ **/
 @Slf4j
 @Service
 public class OrderManageService {
@@ -52,6 +67,9 @@ public class OrderManageService {
     private OrderProgramMapper orderProgramMapper;
     
     @Autowired
+    private OrderTicketUserMapper orderTicketUserMapper;
+    
+    @Autowired
     private OrderTicketUserRecordMapper orderTicketUserRecordMapper;
     
     @Autowired
@@ -61,28 +79,28 @@ public class OrderManageService {
     private OrderTaskService orderTaskService;
     
     
-    public IPage<RecordOrderManageVo> reconciliationList(RecordManageDto recordManageDto) {
-        IPage<RecordOrderManageVo> recordOrderManageVoPage = new Page<>(recordManageDto.getPageNum(), recordManageDto.getPageSize());
-        //查询前5分钟订单节目
-        List<OrderProgram> orderProgramList =
-                orderProgramMapper.selectList(Wrappers.lambdaQuery(OrderProgram.class)
+    public IPage<RecordOrderManageVo> recordPage(RecordManageDto recordManageDto) {
+        IPage<RecordOrderManageVo> recordOrderManageVoPage = new Page<>(recordManageDto.getPageNumber(), recordManageDto.getPageSize());
+        //查询前5分钟订单节目管理表
+        IPage<OrderProgram> orderProgramPage =
+                orderProgramMapper.selectPage(PageUtil.getPageParams(recordManageDto.getPageNumber(),
+                        recordManageDto.getPageSize()),Wrappers.lambdaQuery(OrderProgram.class)
                         .eq(OrderProgram::getProgramId, recordManageDto.getProgramId())
                         .le(OrderProgram::getCreateTime, DateUtils.addMinute(DateUtils.now(), -5)));
-        if (CollectionUtil.isEmpty(orderProgramList)) {
+        
+        if (CollectionUtil.isEmpty(orderProgramPage.getRecords())) {
             return recordOrderManageVoPage;
         }
         //获取订单编号集合
-        List<Long> orderNumberList = orderProgramList.stream().map(OrderProgram::getOrderNumber).toList();
+        List<Long> orderNumberList = orderProgramPage.getRecords().stream().map(OrderProgram::getOrderNumber).toList();
         
         //根据订单编号查询订单
-        IPage<Order> orderPage = orderMapper.selectPage(PageUtil.getPageParams(recordManageDto.getPageNum(),
-                recordManageDto.getPageSize()), Wrappers.lambdaQuery(Order.class)
-                .in(Order::getOrderNumber, orderNumberList));
-        if (CollectionUtil.isEmpty(orderPage.getRecords())) {
+        List<Order> orderList = orderMapper.selectList(Wrappers.lambdaQuery(Order.class).in(Order::getOrderNumber, orderNumberList));
+        if (CollectionUtil.isEmpty(orderList)) {
             return recordOrderManageVoPage;
         }
         //根据查询出的订单获取唯一标识集合
-        List<Long> identifierIdList = orderPage.getRecords().stream().map(Order::getIdentifierId).toList();
+        List<Long> identifierIdList = orderList.stream().map(Order::getIdentifierId).toList();
         
         //根据唯一标识集合查询购票人订单记录
         List<OrderTicketUserRecord> allOrderTicketUserRecordList =
@@ -104,7 +122,7 @@ public class OrderManageService {
         
         List<RecordOrderManageVo> recordOrderManageVoList = new ArrayList<>();
         //循环订单
-        for (Order order : orderPage.getRecords()) {
+        for (Order order : orderList) {
             RecordOrderManageVo recordOrderManageVo = new RecordOrderManageVo();
             recordOrderManageVo.setOrderNumber(order.getOrderNumber());
             recordOrderManageVo.setProgramId(order.getProgramId());
@@ -146,7 +164,7 @@ public class OrderManageService {
             recordOrderManageVo.setRecordOrderTickerUserManageVoList(recordOrderTickerUserManageVoList);
             recordOrderManageVoList.add(recordOrderManageVo);
         }
-        BeanUtils.copyProperties(orderPage, recordOrderManageVoPage);
+        BeanUtils.copyProperties(orderProgramPage, recordOrderManageVoPage);
         recordOrderManageVoPage.setRecords(recordOrderManageVoList);
         return recordOrderManageVoPage;
     }
@@ -169,22 +187,74 @@ public class OrderManageService {
         return redisSeatRecord;
     }
     
-    public Map<String, List<String>> regroup(Map<String, ?> programRecordMap) {
-        Map<String, List<String>> resultMap = new HashMap<>(64);
-        for (String origKey : programRecordMap.keySet()) {
-            // 最多分割为 3 段：["changeStatus", "985033500750127104", "927653802827104258"]
-            String[] parts = origKey.split(GLIDE_LINE, 3);
-            if (parts.length < 3) {
-                // 不符合预期格式时跳过或自行处理
-                continue;
-            }
-            // "changeStatus" 或 "reduce" 或 "increase"
-            String action = parts[0];
-            // "985033500750127104"
-            String newKey = parts[1];
-            // 累加到结果 Map 中
-            resultMap.computeIfAbsent(newKey, k -> new ArrayList<>()).add(action);
+    public IPage<OrderManageVo> orderPage(OrderPageManageDto orderPageManageDto) {
+        IPage<OrderManageVo> orderListManageVoPage = new Page<>(orderPageManageDto.getPageNumber(), orderPageManageDto.getPageSize());
+        IPage<OrderProgram> orderProgramPage =
+                orderProgramMapper.selectPage(PageUtil.getPageParams(orderPageManageDto.getPageNumber(),
+                        orderPageManageDto.getPageSize()),Wrappers.lambdaQuery(OrderProgram.class)
+                        .eq(OrderProgram::getProgramId, orderPageManageDto.getProgramId()));
+        if (CollectionUtil.isEmpty(orderProgramPage.getRecords())) {
+            return orderListManageVoPage;
         }
-        return resultMap;
+        //获取订单编号集合
+        List<Long> orderNumberList = orderProgramPage.getRecords().stream().map(OrderProgram::getOrderNumber).toList();
+        
+        //根据订单编号查询订单
+        List<Order> orderList = orderMapper.selectList(Wrappers.lambdaQuery(Order.class).in(Order::getOrderNumber, orderNumberList));
+        if (CollectionUtil.isEmpty(orderList)) {
+            return orderListManageVoPage;
+        }
+        List<OrderManageVo> orderManageVoList = new ArrayList<>();
+        for (Order order : orderList) {
+            OrderManageVo orderManageVo = new OrderManageVo();
+            BeanUtils.copyProperties(order, orderManageVo);
+            orderManageVo.setOrderStatusName(OrderStatus.getMsg(order.getOrderStatus()));
+            
+            List<OrderTicketUser> orderTicketUserList = orderTicketUserMapper.selectList(Wrappers.lambdaQuery(OrderTicketUser.class)
+                    .eq(OrderTicketUser::getOrderNumber,order.getOrderNumber()));
+            if (CollectionUtil.isNotEmpty(orderTicketUserList)) {
+                List<OrderTicketUserManageVo> orderTicketUserManageVoList = orderTicketUserList.stream().map(orderTicketUser -> {
+                    OrderTicketUserManageVo orderTicketUserManageVo = new OrderTicketUserManageVo();
+                    BeanUtils.copyProperties(orderTicketUser, orderTicketUserManageVo);
+                    orderTicketUserManageVo.setOrderStatusName(OrderStatus.getMsg(orderTicketUser.getOrderStatus()));
+                    return orderTicketUserManageVo;
+                }).toList();
+                orderManageVo.setOrderTicketUserManageVoList(orderTicketUserManageVoList);
+            }
+            orderManageVoList.add(orderManageVo);
+        }
+        BeanUtils.copyProperties(orderProgramPage, orderListManageVoPage);
+        orderListManageVoPage.setRecords(orderManageVoList);
+        return orderListManageVoPage;
+    }
+    
+    public IPage<DiscardOrderManageVo> discardOrderPage(OrderPageManageDto orderPageManageDto) {
+        Long total = redisCache.lenForList(RedisKeyBuild.createRedisKey(RedisKeyManage.DISCARD_ORDER, orderPageManageDto.getProgramId()));
+        IPage<DiscardOrderManageVo> discardOrderManageVoPage = new Page<>(orderPageManageDto.getPageNumber(), orderPageManageDto.getPageSize(),total);
+        long start = (long) (orderPageManageDto.getPageNumber() - 1) * orderPageManageDto.getPageSize();
+        long end = start + orderPageManageDto.getPageSize() - 1;
+        List<DiscardOrder> discardOrderList = redisCache.rangeForList(RedisKeyBuild.createRedisKey(RedisKeyManage.DISCARD_ORDER, orderPageManageDto.getProgramId()),start, end, DiscardOrder.class);
+        if (CollectionUtil.isEmpty(discardOrderList)) {
+            return discardOrderManageVoPage;
+        }
+        List<DiscardOrderManageVo> discardOrderManageVoList = new ArrayList<>();
+        for (DiscardOrder discardOrder : discardOrderList) {
+            DiscardOrderManageVo discardOrderManageVo = new DiscardOrderManageVo();
+            BeanUtils.copyProperties(discardOrder.getOrderCreateMq(), discardOrderManageVo);
+            discardOrderManageVo.setDiscardOrderReason(discardOrder.getDiscardOrderReason());
+            discardOrderManageVo.setDiscardOrderReasonName(DiscardOrderReason.getMsg(discardOrder.getDiscardOrderReason()));
+            List<OrderTicketUserCreateDto> orderTicketUserCreateDtoList = discardOrder.getOrderCreateMq().getOrderTicketUserCreateDtoList();
+            List<DiscardOrderTicketUserManageVo> discardOrderTicketUserManageVoList = new ArrayList<>();
+            for (OrderTicketUserCreateDto orderTicketUserCreateDto : orderTicketUserCreateDtoList) {
+                DiscardOrderTicketUserManageVo discardOrderTicketUserManageVo = new DiscardOrderTicketUserManageVo();
+                BeanUtils.copyProperties(orderTicketUserCreateDto, discardOrderTicketUserManageVo);
+                discardOrderTicketUserManageVoList.add(discardOrderTicketUserManageVo);
+            }
+            discardOrderManageVo.setDiscardOrderTicketUserManageVo(discardOrderTicketUserManageVoList);
+            discardOrderManageVoList.add(discardOrderManageVo);
+        }
+      
+        discardOrderManageVoPage.setRecords(discardOrderManageVoList);
+        return discardOrderManageVoPage;
     }
 }
