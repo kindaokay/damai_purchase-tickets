@@ -56,7 +56,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import static com.damai.constant.Constant.GLIDE_LINE;
-import static com.damai.service.constant.ProgramOrderConstant.ORDER_TABLE_COUNT;
+import static com.damai.constant.ProgramOrderConstant.ORDER_TABLE_COUNT;
 
 /**
  * @program: 极度真实还原大麦网高并发实战项目。 添加 阿星不是程序员 微信，添加时备注 大麦 来获取项目的完整资料 
@@ -310,8 +310,9 @@ public class ProgramOrderService {
         String orderNumber = createOrderByRpc(orderCreateDto,purchaseSeatList);
         
         DelayOrderCancelDto delayOrderCancelDto = new DelayOrderCancelDto();
+        delayOrderCancelDto.setProgramId(programOrderCreateDto.getProgramId());
         delayOrderCancelDto.setOrderNumber(orderCreateDto.getOrderNumber());
-        delayOrderCancelSend.sendMessage(JSON.toJSONString(delayOrderCancelDto));
+        delayOrderCancelSend.sendMessage(delayOrderCancelDto);
         
         return orderNumber;
     }
@@ -329,8 +330,9 @@ public class ProgramOrderService {
         //创建订单
         String orderNumber = createOrderByMq(orderCreateMq,createOrderTemporaryData.getPurchaseSeatList());
         DelayOrderCancelDto delayOrderCancelDto = new DelayOrderCancelDto();
+        delayOrderCancelDto.setProgramId(orderCreateDto.getProgramId());
         delayOrderCancelDto.setOrderNumber(orderCreateDto.getOrderNumber());
-        delayOrderCancelSend.sendMessage(JSON.toJSONString(delayOrderCancelDto));
+        delayOrderCancelSend.sendMessage(delayOrderCancelDto);
         
         return orderNumber;
     }

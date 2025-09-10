@@ -190,6 +190,11 @@
             <artifactId>opencsv</artifactId>
             <version>${opencsv.version}</version>
         </dependency>
+        <dependency>
+            <groupId>com.example</groupId>
+            <artifactId>damai-customize-client</artifactId>
+            <version>${revision}</version>
+        </dependency>
     </dependencies>
 
     <build>

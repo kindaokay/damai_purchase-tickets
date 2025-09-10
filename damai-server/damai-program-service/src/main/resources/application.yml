@@ -136,6 +136,9 @@ delay:
     corePoolSize: 8                     # 核心线程数(提升并发处理能力)
     maximumPoolSize: 16                 # 最大线程数
     isolationRegionCount: 8             # 隔离区域数量(提升并发)
+  # 执行延迟订单取消开关  
+  order:
+    cancel: true
 springdoc:
   swagger-ui:
     path: /swagger-ui.html
@@ -161,6 +164,7 @@ knife4j:
     language: zh_cn
     enable-version: true
     enable-swagger-models: true
+    
 seata:
   enabled: true                                 # 启动事务中间件
   application-id: program-service

@@ -524,60 +524,43 @@ public class OrderService extends ServiceImpl<OrderMapper, Order> {
         }
     }
     
-    public void updateProgramRelatedDataResolution(Long programId,Map<Long,List<Long>> seatMap,
-                                                   OrderStatus orderStatus,Long identifierId,
-                                                   Long userId,
+    public void updateProgramRelatedDataResolution(Long programId,Map<Long,List<Long>> seatMap, OrderStatus orderStatus,Long identifierId, Long userId,
                                                    List<SeatIdAndTicketUserIdDomain> seatIdAndTicketUserIdDomainList,
                                                    Integer orderVersion){
         Map<Long, List<SeatVo>> seatVoMap = new HashMap<>(seatMap.size());
-        //从redis中查询锁定中的座位
         seatMap.forEach((k,v) -> {
             seatVoMap.put(k,redisCache.multiGetForHash(
                     RedisKeyBuild.createRedisKey(RedisKeyManage.PROGRAM_SEAT_LOCK_RESOLUTION_HASH, programId, k),
                     v.stream().map(String::valueOf).collect(Collectors.toList()), SeatVo.class));
-            
         });
         if (CollectionUtil.isEmpty(seatVoMap)) {
             throw new DaMaiFrameException(BaseCode.LOCK_SEAT_LIST_EMPTY);
         }
-        //票档相关数据
         JSONArray jsonArray = new JSONArray();
-        //要添加的座位相关数据
         JSONArray addSeatDatajsonArray = new JSONArray();
         List<TicketCategoryCountDto> ticketCategoryCountDtoList = new ArrayList<>(seatVoMap.size());
-        //锁定的座位相关数据
         JSONArray unLockSeatIdjsonArray = new JSONArray();
-        //锁定的座位id集合(用于发送给节目服务使用)
         List<Long> unLockSeatIdList = new ArrayList<>();
         seatVoMap.forEach((k,v) -> {
             JSONObject unLockSeatIdjsonObject = new JSONObject();
-            //锁定的座位hash的key
             unLockSeatIdjsonObject.put("programSeatLockHashKey", RedisKeyBuild.createRedisKey(
                     RedisKeyManage.PROGRAM_SEAT_LOCK_RESOLUTION_HASH, programId, k).getRelKey());
-            //扣除锁定的座位数据
             unLockSeatIdjsonObject.put("unLockSeatIdList",v.stream()
                     .map(SeatVo::getId).map(String::valueOf).collect(Collectors.toList()));
             unLockSeatIdjsonArray.add(unLockSeatIdjsonObject);
-            
             JSONObject seatDatajsonObject = new JSONObject();
-            //要添加的座位hash的key
             String seatHashKeyAdd = "";
-            //如果是订单取消操作
             if (Objects.equals(orderStatus.getCode(), OrderStatus.CANCEL.getCode())) {
-                //要添加的座位hash的key就是未售卖座位
                 seatHashKeyAdd = RedisKeyBuild.createRedisKey(
                         RedisKeyManage.PROGRAM_SEAT_NO_SOLD_RESOLUTION_HASH, programId, k).getRelKey();
                 for (SeatVo seatVo : v) {
                     //座位状态要改成未售卖
                     seatVo.setSellStatus(SellStatus.NO_SOLD.getCode());
                 }
-                //如果是订单支付操作
             }else if (Objects.equals(orderStatus.getCode(), OrderStatus.PAY.getCode())) {
-                //要添加的座位hash的key就是已售卖座位
                 seatHashKeyAdd = RedisKeyBuild.createRedisKey(
                         RedisKeyManage.PROGRAM_SEAT_SOLD_RESOLUTION_HASH, programId, k).getRelKey();
                 for (SeatVo seatVo : v) {
-                    //座位状态要改成已售卖
                     seatVo.setSellStatus(SellStatus.SOLD.getCode());
                 }
             }
@@ -587,22 +570,14 @@ public class OrderService extends ServiceImpl<OrderMapper, Order> {
                 seatDataList.add(String.valueOf(seatVo.getId()));
                 seatDataList.add(JSON.toJSONString(seatVo));
             }
-            //如果是订单取消的操作，那么添加到未售卖的座位数据
-            //如果是订单支付的操作，那么添加到已售卖的座位数据
             seatDatajsonObject.put("seatDataList",seatDataList);
             addSeatDatajsonArray.add(seatDatajsonObject);
-            //票档相关数据（只在订单取消操作有用）
             JSONObject jsonObject = new JSONObject();
-            //票档的hash的key
             jsonObject.put("programTicketRemainNumberHashKey",RedisKeyBuild.createRedisKey(
                     RedisKeyManage.PROGRAM_TICKET_REMAIN_NUMBER_HASH_RESOLUTION, programId, k).getRelKey());
-            //票档id
             jsonObject.put("ticketCategoryId",String.valueOf(k));
-            //票档恢复的余票数量
             jsonObject.put("count",v.size());
             jsonArray.add(jsonObject);
-            
-            //组装发送给节目服务的数据
             TicketCategoryCountDto ticketCategoryCountDto = new TicketCategoryCountDto();
             ticketCategoryCountDto.setTicketCategoryId(k);
             ticketCategoryCountDto.setCount((long) v.size());
@@ -611,28 +586,17 @@ public class OrderService extends ServiceImpl<OrderMapper, Order> {
             unLockSeatIdList.addAll(v.stream().map(SeatVo::getId).toList());
         });
         List<String> keys = new ArrayList<>();
-        //操作类型
         keys.add(String.valueOf(orderStatus.getCode()));
-        //节目id
         keys.add(String.valueOf(programId));
-        //记录的key(占位符形式)
         keys.add(RedisKeyBuild.getRedisKey(RedisKeyManage.PROGRAM_RECORD));
         
-        String recordTye = Objects.equals(orderStatus.getCode(), OrderStatus.CANCEL.getCode()) ?
-                RecordType.INCREASE.getValue() : RecordType.CHANGE_STATUS.getValue();
-        //把记录的标识id放进去
+        String recordTye = Objects.equals(orderStatus.getCode(), OrderStatus.CANCEL.getCode()) ? RecordType.INCREASE.getValue() : RecordType.CHANGE_STATUS.getValue();
         keys.add(recordTye + GLIDE_LINE + identifierId + GLIDE_LINE + userId);
-        //记录的类型
         keys.add(recordTye);
         Object[] data = new String[4];
-        //扣除锁定的座位数据
         data[0] = JSON.toJSONString(unLockSeatIdjsonArray);
-        //如果是订单取消的操作，那么添加到未售卖的座位数据
-        //如果是订单支付的操作，那么添加到已售卖的座位数据
         data[1] = JSON.toJSONString(addSeatDatajsonArray);
-        //恢复库存数据
         data[2] = JSON.toJSONString(jsonArray);
-        //座位id和对应的购票人id
         data[3] = JSON.toJSONString(seatIdAndTicketUserIdDomainList);
         
         ProgramOperateDataDto programOperateDataDto = new ProgramOperateDataDto();
@@ -648,19 +612,15 @@ public class OrderService extends ServiceImpl<OrderMapper, Order> {
                 delayOperateProgramDataSend.sendMessage(JSON.toJSONString(programOperateDataDto));
             }
         }else {
-            //如果创建订单版本是v4
-            //更新节目服务的相关数据
+            //如果创建订单版本是v4 更新节目服务的相关数据
             if (Objects.equals(orderStatus.getCode(), OrderStatus.PAY.getCode()) ||
                     Objects.equals(orderStatus.getCode(), OrderStatus.CANCEL.getCode())) {
-                //如果是支付操作，那么座位状态就改为已售卖，如果是取消操作，那么座位状态就改为未售卖
-                programOperateDataDto.setSellStatus(Objects.equals(orderStatus.getCode(), OrderStatus.PAY.getCode())
-                        ? SellStatus.SOLD.getCode() : SellStatus.NO_SOLD.getCode());
+                programOperateDataDto.setSellStatus(Objects.equals(orderStatus.getCode(), OrderStatus.PAY.getCode()) ? SellStatus.SOLD.getCode() : SellStatus.NO_SOLD.getCode());
                 ApiResponse<Boolean> programApiResponse = programClient.operateProgramData(programOperateDataDto);
                 if (!Objects.equals(programApiResponse.getCode(), BaseCode.SUCCESS.getCode())) {
                     throw new DaMaiFrameException(programApiResponse);
                 }
             }
-            //执行lua脚本
             orderProgramCacheResolutionOperate.programCacheReverseOperate(keys,data);
         }
     }

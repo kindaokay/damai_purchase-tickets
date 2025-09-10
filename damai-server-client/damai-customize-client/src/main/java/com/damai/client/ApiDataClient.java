@@ -2,10 +2,16 @@ package com.damai.client;
 
 import com.damai.common.ApiResponse;
 import com.damai.dto.AddApiDataDto;
+import com.damai.dto.InsertMessageConsumerRecordDto;
+import com.damai.dto.InsertMessageProducerRecordDto;
+import com.damai.dto.MessageIdDto;
+import com.damai.dto.UpdateMessageConsumerRecordDto;
+import com.damai.dto.UpdateMessageProducerRecordDto;
+import com.damai.vo.MessageConsumerRecordVo;
+import com.damai.vo.MessageProducerRecordVo;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.stereotype.Component;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.PostMapping;
 
 import static com.damai.constant.Constant.SPRING_INJECT_PREFIX_DISTINCTION_NAME;
 
@@ -23,7 +29,46 @@ public interface ApiDataClient {
      * @param dto 参数
      * @return 结果
      * */
-    @RequestMapping(value = "/apiData/add",method = RequestMethod.POST)
+    @PostMapping(value = "/apiData/add")
     ApiResponse<Boolean> add(AddApiDataDto dto);
     
+    /**
+     * 添加消息发送记录
+     * @param insertMessageProducerRecordDto 参数
+     * @return 结果
+     * */
+    @PostMapping(value = "/message/producer/record/insert")
+    ApiResponse<MessageProducerRecordVo> insertMessageProducerRecord(InsertMessageProducerRecordDto insertMessageProducerRecordDto);
+    
+    /**
+     * 更新消息发送记录
+     * @param updateMessageProducerRecordDto 参数
+     * @return 结果
+     * */
+    @PostMapping(value = "/message/producer/record/update")
+    ApiResponse<Boolean> updateMessageProducerRecord(UpdateMessageProducerRecordDto updateMessageProducerRecordDto);
+    
+    /**
+     * 查询消息消费记录
+     * @param messageIdDto 参数
+     * @return 结果
+     * */
+    @PostMapping(value = "/message/consumer/record/getByMessageId")
+    ApiResponse<MessageConsumerRecordVo> getMessageConsumerByMessageId(MessageIdDto messageIdDto);
+    
+    /**
+     * 添加消息消费记录
+     * @param insertMessageConsumerRecordDto 参数
+     * @return 结果
+     * */
+    @PostMapping(value = "/message/consumer/record/insert")
+    ApiResponse<MessageConsumerRecordVo> insertMessageConsumerRecord(InsertMessageConsumerRecordDto insertMessageConsumerRecordDto);
+    
+    /**
+     * 更新消息消费记录
+     * @param updateMessageConsumerRecordDto 参数
+     * @return 结果
+     * */
+    @PostMapping(value = "/message/consumer/record/update")
+    ApiResponse<Boolean> updateMessageConsumerRecord(UpdateMessageConsumerRecordDto updateMessageConsumerRecordDto);
 }

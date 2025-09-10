@@ -2,7 +2,14 @@ package com.damai.client;
 
 import com.damai.common.ApiResponse;
 import com.damai.dto.AddApiDataDto;
+import com.damai.dto.InsertMessageConsumerRecordDto;
+import com.damai.dto.InsertMessageProducerRecordDto;
+import com.damai.dto.MessageIdDto;
+import com.damai.dto.UpdateMessageConsumerRecordDto;
+import com.damai.dto.UpdateMessageProducerRecordDto;
 import com.damai.enums.BaseCode;
+import com.damai.vo.MessageConsumerRecordVo;
+import com.damai.vo.MessageProducerRecordVo;
 import org.springframework.stereotype.Component;
 
 /**
@@ -15,6 +22,31 @@ public class ApiDataClientFallback implements ApiDataClient {
     
     @Override
     public ApiResponse<Boolean> add(final AddApiDataDto dto) {
+        return ApiResponse.error(BaseCode.SYSTEM_ERROR);
+    }
+    
+    @Override
+    public ApiResponse<MessageProducerRecordVo> insertMessageProducerRecord(final InsertMessageProducerRecordDto insertMessageProducerRecordDto) {
+        return ApiResponse.error(BaseCode.SYSTEM_ERROR);
+    }
+    
+    @Override
+    public ApiResponse<Boolean> updateMessageProducerRecord(final UpdateMessageProducerRecordDto updateMessageProducerRecordDto) {
+        return ApiResponse.error(BaseCode.SYSTEM_ERROR);
+    }
+    
+    @Override
+    public ApiResponse<MessageConsumerRecordVo> getMessageConsumerByMessageId(final MessageIdDto messageIdDto) {
+        return ApiResponse.error(BaseCode.SYSTEM_ERROR);
+    }
+    
+    @Override
+    public ApiResponse<MessageConsumerRecordVo> insertMessageConsumerRecord(final InsertMessageConsumerRecordDto insertMessageConsumerRecordDto) {
+        return ApiResponse.error(BaseCode.SYSTEM_ERROR);
+    }
+    
+    @Override
+    public ApiResponse<Boolean> updateMessageConsumerRecord(final UpdateMessageConsumerRecordDto updateMessageConsumerRecordDto) {
         return ApiResponse.error(BaseCode.SYSTEM_ERROR);
     }
 }

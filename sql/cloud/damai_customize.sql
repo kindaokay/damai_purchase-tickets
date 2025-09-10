@@ -108,3 +108,48 @@ LOCK TABLES `d_rule` WRITE;
 UNLOCK TABLES;
 
 
+CREATE TABLE `d_message_consumer_record` (
+     `id` bigint NOT NULL,
+     `message_type` int NOT NULL COMMENT '消息类型，详见MessageType枚举',
+     `message_trace_id` bigint DEFAULT NULL COMMENT '消息的链路id',
+     `message_businesses_id` bigint DEFAULT NULL COMMENT '消息业务id',
+     `message_id` bigint NOT NULL COMMENT '消息id',
+     `message_topic` varchar(256) DEFAULT NULL COMMENT '消息的topic',
+     `message_content` text COMMENT '消息内容',
+     `message_consumer_exception` varchar(256) DEFAULT NULL COMMENT '消息消费失败的异常信息',
+     `message_consumer_status` int DEFAULT '1' COMMENT '消息消费状态 1:未消费 -1:消费失败 2:消费成功',
+     `message_consumer_count` int NOT NULL DEFAULT '1' COMMENT '消息的消费次数',
+     `reconciliation_status` int DEFAULT '1' COMMENT '消息对账状态 1:未对账 -1:对账完成有问题 2:对账完成没有问题 3:对账有问题处理完毕',
+     `consumer_time` datetime DEFAULT NULL COMMENT '消息发送时间',
+     `status` int DEFAULT '1' COMMENT '状态 1:启用 0:禁用',
+     `edit_time` datetime DEFAULT NULL COMMENT '编辑时间',
+     `create_time` datetime DEFAULT NULL COMMENT '创建时间',
+     PRIMARY KEY (`id`),
+     KEY `d_message_producer_record_message_businesses_id_IDX` (`message_businesses_id`) USING BTREE,
+     KEY `d_message_consumer_record_message_trace_id_IDX` (`message_trace_id`) USING BTREE,
+     KEY `d_message_consumer_record_message_id_IDX` (`message_id`) USING BTREE,
+     KEY `d_message_consumer_record_consumer_time_IDX` (`consumer_time`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='消息消费记录表';
+
+
+CREATE TABLE `d_message_producer_record` (
+     `id` bigint NOT NULL,
+     `message_type` int NOT NULL COMMENT '消息类型，详见MessageType枚举',
+     `message_trace_id` bigint DEFAULT NULL COMMENT '消息的链路id',
+     `message_businesses_id` bigint DEFAULT NULL COMMENT '消息业务id',
+     `message_id` bigint NOT NULL COMMENT '消息id',
+     `message_topic` varchar(256) DEFAULT NULL COMMENT '消息的topic',
+     `message_content` text COMMENT '消息内容',
+     `message_send_exception` varchar(256) DEFAULT NULL COMMENT '消息发送失败的异常信息',
+     `message_send_status` int DEFAULT '1' COMMENT '消息发送状态 1:未发送 -1:发送失败 2:发送成功',
+     `reconciliation_status` int DEFAULT '1' COMMENT '消息对账状态 1:未对账 -1:对账完成有问题 2:对账完成没有问题 3:对账有问题处理完毕',
+     `send_time` datetime DEFAULT NULL COMMENT '消息发送时间',
+     `status` int DEFAULT '1' COMMENT '状态 1:启用 0:禁用',
+     `edit_time` datetime DEFAULT NULL COMMENT '编辑时间',
+     `create_time` datetime DEFAULT NULL COMMENT '创建时间',
+     PRIMARY KEY (`id`),
+     KEY `d_message_producer_record_message_businesses_id_IDX` (`message_businesses_id`) USING BTREE,
+     KEY `d_message_producer_record_message_trace_id_IDX` (`message_trace_id`) USING BTREE,
+     KEY `d_message_producer_record_message_id_IDX` (`message_id`) USING BTREE,
+     KEY `d_message_producer_record_send_time_IDX` (`send_time`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='消息发送记录表';

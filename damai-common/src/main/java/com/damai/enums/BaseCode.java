@@ -259,6 +259,10 @@ public enum BaseCode {
     MAX_RETRY_COUNT(70004,"添加记录流水失败超过最大重试次数"),
     
     SERVICE_LOCK_FAIL(70005,"分布式锁加锁失败"),
+    
+    MESSAGE_NOT_EXIST(70100, "消息不存在"),
+    
+    MESSAGE_TYPE_NOT_EXIST(70101, "消息类型不存在"),
     ;
     
     private final Integer code;

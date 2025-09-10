@@ -1,0 +1,72 @@
+package com.damai.dto;
+
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.media.Schema.RequiredMode;
+import jakarta.validation.constraints.NotNull;
+import lombok.Data;
+
+import java.io.Serial;
+import java.io.Serializable;
+import java.util.Date;
+
+/**
+ * @program: 极度真实还原大麦网高并发实战项目。 添加 阿星不是程序员 微信，添加时备注 大麦 来获取项目的完整资料 
+ * @description: 更新消息发送记录 实体
+ * @author: 阿星不是程序员
+ **/
+@Data
+public class UpdateMessageProducerRecordDto implements Serializable {
+    
+    @Serial
+    private static final long serialVersionUID = 1L;
+    
+    @Schema(name ="id", type ="Long", description ="消息发送记录id", requiredMode= RequiredMode.REQUIRED)
+    @NotNull
+    private Long id;
+    
+    /**
+     * 消息类型，详见MessageType枚举
+     */
+    private Integer messageType;
+    
+    
+    /**
+     * 消息的链路id
+     */
+    private Long messageTraceId;
+    
+    /**
+     * 消息业务id
+     */
+    private Long messageBusinessesId;
+    
+    /**
+     * 消息id
+     */
+    private Long messageId;
+    
+    /**
+     * 消息内容
+     */
+    private String messageContent;
+    
+    /**
+     * 消息发送失败的异常信息
+     */
+    private String messageSendException;
+    
+    /**
+     * 消息发送状态 1:未发送 -1:发送失败 2:发送成功
+     */
+    private Integer messageSendStatus;
+    
+    /**
+     * 消息对账状态 1:未对账 -1:对账完成有问题 2:对账完成没有问题 3:对账有问题处理完毕
+     */
+    private Integer reconciliationStatus;
+    
+    /**
+     * 消息发送时间
+     */
+    private Date sendTime;
+}
