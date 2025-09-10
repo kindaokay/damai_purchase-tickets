@@ -35,7 +35,7 @@ public class BackManageUserService {
         backManageUserDetailVo.setRealName("阿星不是程序员");
         backManageUserDetailVo.setDesc("javaup@yeah.net");
         backManageUserDetailVo.setUsername(backManageLoginDto.getUsername());
-        backManageUserDetailVo.setAvatar("https://multimedia-javaup.cn/%E6%95%B0%E6%8D%AE%E4%B8%AD%E5%8F%B0/avatar-logo.png");
+        backManageUserDetailVo.setAvatar("https://multimedia-javaup.cn/%E5%A4%A7%E9%BA%A6pro/dog.png");
         session.set("userDetail", JSON.toJSONString(backManageUserDetailVo));
         BackManageLoginVo backManageLoginVo = new BackManageLoginVo();
         backManageLoginVo.setId("1");
