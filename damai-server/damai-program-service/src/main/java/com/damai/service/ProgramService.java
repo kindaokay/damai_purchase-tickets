@@ -901,17 +901,20 @@ public class ProgramService extends ServiceImpl<ProgramMapper, Program> {
     @Transactional(rollbackFor = Exception.class)
     public Boolean resetExecute(ProgramResetExecuteDto programResetExecuteDto) {
         Long programId = programResetExecuteDto.getProgramId();
+        //查出该节目下锁定和已售卖的座位
         LambdaQueryWrapper<Seat> seatQueryWrapper =
                 Wrappers.lambdaQuery(Seat.class).eq(Seat::getProgramId, programId)
                         .in(Seat::getSellStatus,SellStatus.LOCK.getCode(),SellStatus.SOLD.getCode());
         List<Seat> seatList = seatMapper.selectList(seatQueryWrapper);
         if (CollectionUtil.isNotEmpty(seatList)) {
+            //执行到这里说明有锁定和已售卖的座位，那么就把该节目下的座位都重置一遍
             LambdaUpdateWrapper<Seat> seatUpdateWrapper =
                     Wrappers.lambdaUpdate(Seat.class).eq(Seat::getProgramId, programId);
             Seat seatUpdate = new Seat();
             seatUpdate.setSellStatus(SellStatus.NO_SOLD.getCode());
             seatMapper.update(seatUpdate,seatUpdateWrapper);
         }
+        //查询该节目下的票档
         LambdaQueryWrapper<TicketCategory> ticketCategoryQueryWrapper =
                 Wrappers.lambdaQuery(TicketCategory.class).eq(TicketCategory::getProgramId, programId);
         List<TicketCategory> ticketCategories = ticketCategoryMapper.selectList(ticketCategoryQueryWrapper);
@@ -919,6 +922,7 @@ public class ProgramService extends ServiceImpl<ProgramMapper, Program> {
             for (TicketCategory ticketCategory : ticketCategories) {
                 Long remainNumber = ticketCategory.getRemainNumber();
                 Long totalNumber = ticketCategory.getTotalNumber();
+                //如果总数和剩余数不一致，则进行重置
                 if (!(remainNumber.equals(totalNumber))) {
                     TicketCategory ticketCategoryUpdate = new TicketCategory();
                     ticketCategoryUpdate.setRemainNumber(totalNumber);
@@ -931,7 +935,9 @@ public class ProgramService extends ServiceImpl<ProgramMapper, Program> {
                 }
             }
         }
+        //删除缓存相关数据
         delRedisData(programId);
+        //删除本地缓存数据
         delLocalCache(programId);
         return true;
     }

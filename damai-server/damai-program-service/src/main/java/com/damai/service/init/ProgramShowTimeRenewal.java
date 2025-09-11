@@ -35,12 +35,16 @@ public class ProgramShowTimeRenewal extends AbstractApplicationPostConstructHand
     
     @Override
     public void executeInit(final ConfigurableApplicationContext context) {
+        //判断节目演出时间是否过期，如果过期了，则更新时间，并返回已经更新演出时间的节目id
         Set<Long> programIdSet = programShowTimeService.renewal();
         if (!programIdSet.isEmpty()) {
+            //如果更新了，将elasticsearch的整个索引和数据都删除
             businessEsHandle.deleteIndex(SpringUtil.getPrefixDistinctionName() + "-" +
                     ProgramDocumentParamName.INDEX_NAME);
             for (Long programId : programIdSet) {
+                //将redis中的数据也删除
                 programService.delRedisData(programId);
+                //将本地缓存数据也删除
                 programService.delLocalCache(programId);
             }
         }

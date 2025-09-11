@@ -130,6 +130,7 @@ public class ProgramShowTimeService extends ServiceImpl<ProgramShowTimeMapper, P
     @Transactional(rollbackFor = Exception.class)
     public Set<Long> renewal(){
         Set<Long> programIdSet = new HashSet<>();
+        //查询演出时间小于2天前的节目演出数据
         LambdaQueryWrapper<ProgramShowTime> programShowTimeLambdaQueryWrapper =
                 Wrappers.lambdaQuery(ProgramShowTime.class).
                         le(ProgramShowTime::getShowTime, DateUtils.addDay(DateUtils.now(), 2));
@@ -138,13 +139,19 @@ public class ProgramShowTimeService extends ServiceImpl<ProgramShowTimeMapper, P
         List<ProgramShowTime> newProgramShowTimes = new ArrayList<>(programShowTimes.size());
         
         for (ProgramShowTime programShowTime : programShowTimes) {
+            //要更新演出时间的节目id
             programIdSet.add(programShowTime.getProgramId());
+            //记录中现有的演出时间
             Date oldShowTime = programShowTime.getShowTime();
+            //将现有的演出时间加上一个月作为新的演出时间
             Date newShowTime = DateUtils.addMonth(oldShowTime, 1);
+            //当前时间
             Date nowDateTime = DateUtils.now();
+            //如果新的演出时间还是小于当前时间，则继续再加一个月，直到新的演出时间大于当前时间为止
             while (newShowTime.before(nowDateTime)) {
                 newShowTime = DateUtils.addMonth(newShowTime, 1);
             }
+            //构建要更新的数据
             Date newShowDayTime = DateUtils.parseDateTime(DateUtils.formatDate(newShowTime) + " 00:00:00");
             ProgramShowTime updateProgramShowTime = new ProgramShowTime();
             updateProgramShowTime.setShowTime(newShowTime);
@@ -154,7 +161,7 @@ public class ProgramShowTimeService extends ServiceImpl<ProgramShowTimeMapper, P
                     Wrappers.lambdaUpdate(ProgramShowTime.class)
                             .eq(ProgramShowTime::getProgramId, programShowTime.getProgramId())
                             .eq(ProgramShowTime::getId,programShowTime.getId());
-                    
+            //进行数据库更新节目演出时间        
             programShowTimeMapper.update(updateProgramShowTime,programShowTimeLambdaUpdateWrapper);
             
             ProgramShowTime newProgramShowTime = new ProgramShowTime();
@@ -162,6 +169,7 @@ public class ProgramShowTimeService extends ServiceImpl<ProgramShowTimeMapper, P
             newProgramShowTime.setShowTime(newShowTime);
             newProgramShowTimes.add(newProgramShowTime);
         }
+        //节目组最近演出时间更新
         Map<Long,Date> programGroupMap = new HashMap<>(newProgramShowTimes.size());
         for (ProgramShowTime newProgramShowTime : newProgramShowTimes) {
             Program program = programMapper.selectById(newProgramShowTime.getProgramId());
@@ -171,8 +179,10 @@ public class ProgramShowTimeService extends ServiceImpl<ProgramShowTimeMapper, P
             Long programGroupId = program.getProgramGroupId();
             Date showTime = programGroupMap.get(programGroupId);
             if (Objects.isNull(showTime)) {
+                //如果programGroupMap中没有节目演出时间，则直接放入
                 programGroupMap.put(programGroupId,newProgramShowTime.getShowTime());
             }else {
+                //如果programGroupMap中有节目演出时间，则比较现有的和新的那个更小，取更小的
                 if (DateUtil.compare(newProgramShowTime.getShowTime(),showTime) < 0) {
                     programGroupMap.put(programGroupId,newProgramShowTime.getShowTime());
                 }
@@ -186,10 +196,11 @@ public class ProgramShowTimeService extends ServiceImpl<ProgramShowTimeMapper, P
                 LambdaUpdateWrapper<ProgramGroup> programGroupLambdaUpdateWrapper =
                         Wrappers.lambdaUpdate(ProgramGroup.class)
                                 .eq(ProgramGroup::getId,k);
+                //进行数据库更新节目组最近演出时间
                 programGroupMapper.update(programGroup,programGroupLambdaUpdateWrapper);
             });
         }
-        
+        //返回更新了演出时间的节目id集合
         return programIdSet;
     }
 }

@@ -10,7 +10,7 @@ import com.damai.dto.OrderListDto;
 import com.damai.dto.OrderPayCheckDto;
 import com.damai.dto.OrderPayDto;
 import com.damai.dto.ProgramGetDto;
-import com.damai.scheduletask.OrderDataTask;
+import com.damai.scheduletask.PresentationOrderDataTask;
 import com.damai.scheduletask.ReconciliationTask;
 import com.damai.service.OrderService;
 import com.damai.service.OrderTaskService;
@@ -50,7 +50,7 @@ public class OrderController {
     private ReconciliationTask reconciliationTask;
     
     @Autowired
-    private OrderDataTask orderDataTask;
+    private PresentationOrderDataTask orderDataTask;
     
     @Operation(summary  = "订单创建(不提供给前端调用，只允许内部program服务调用)")
     @PostMapping(value = "/create")

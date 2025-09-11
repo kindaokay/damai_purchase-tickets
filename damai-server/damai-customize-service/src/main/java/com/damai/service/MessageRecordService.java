@@ -22,13 +22,16 @@ import com.damai.mapper.MessageProducerRecordMapper;
 import com.damai.page.PageUtil;
 import com.damai.reconciliation.ReconciliationTask;
 import com.damai.reconciliation.ReconciliationTaskQueue;
+import com.damai.util.DateUtils;
 import com.damai.vo.MessageRecordVo;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -178,5 +181,13 @@ public class MessageRecordService {
         messageConsumerRecordWrapper.in(MessageConsumerRecord::getMessageId, messageIdList);
         List<MessageConsumerRecord> messageConsumerRecordList = messageConsumerRecordMapper.selectList(messageConsumerRecordWrapper);
         return messageConsumerRecordList.stream().collect(Collectors.toMap(MessageConsumerRecord::getMessageId, m -> m));
+    }
+    
+    @Transactional(rollbackFor = Exception.class)
+    public void deleteMessageRecord(Date date){
+        //把今天的消息记录数据删除掉，真实环境中不会删除的，这里是为了在线演示才删除的，要不然数据太多了
+        String dateStr = DateUtils.format(date, DateUtils.FORMAT_DATE);
+        messageProducerRecordMapper.deleteBySendTime(dateStr);
+        messageConsumerRecordMapper.deleteByConsumerTime(dateStr);
     }
 }
