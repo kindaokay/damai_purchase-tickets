@@ -13,10 +13,13 @@ import lombok.EqualsAndHashCode;
  **/
 @EqualsAndHashCode(callSuper = true)
 @Data
-@Schema(title="OrderPageManageDto", description ="订单")
-public class OrderPageManageDto extends BasePageDto{
+@Schema(title="SeatPageManageDto", description ="座位")
+public class SeatPageManageDto extends BasePageDto{
     
-    @Schema(name ="programId", type ="Long", description ="id",requiredMode= RequiredMode.REQUIRED)
+    @Schema(name ="节目id", type ="Long", description ="id",requiredMode= RequiredMode.REQUIRED)
     @NotNull
     private Long programId;
+    
+    @Schema(name ="票档id", type ="Long", description ="ticketCategoryId",requiredMode= RequiredMode.REQUIRED)
+    private Long ticketCategoryId;
 }
