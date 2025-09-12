@@ -1,6 +1,7 @@
 package com.damai.filter;
 
 import cn.dev33.satoken.config.SaTokenConfig;
+import com.damai.properties.ApiVerify;
 import com.damai.properties.BackManageProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -59,5 +60,10 @@ public class FilterAutoConfiguration {
         // 是否输出操作日志 
         config.setIsLog(false);                     
         return config;
+    }
+    
+    @Bean
+    public ApiVerify apiVerify(BackManageProperties backManageProperties){
+        return new ApiVerify(backManageProperties);
     }
 }

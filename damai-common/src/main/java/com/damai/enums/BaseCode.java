@@ -263,6 +263,10 @@ public enum BaseCode {
     MESSAGE_NOT_EXIST(70100, "消息不存在"),
     
     MESSAGE_TYPE_NOT_EXIST(70101, "消息类型不存在"),
+    
+    API_CALL_NEED_PASSWORD(70102, "此api调用需要密码"),
+    
+    API_CALL_PASSWORD_ERROR(70103, "此api调用密码错误"),
     ;
     
     private final Integer code;

@@ -21,4 +21,8 @@ public class BackManageProperties {
     private String password = "admin";
     
     private List<String> loginExcludeApi = List.of("/auth/login");
+    
+    private Boolean apiPasswordCall = false;
+    
+    private String apiPassword;
 }

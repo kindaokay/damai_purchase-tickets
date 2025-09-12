@@ -10,6 +10,7 @@ import com.damai.dto.OrderListDto;
 import com.damai.dto.OrderPayCheckDto;
 import com.damai.dto.OrderPayDto;
 import com.damai.dto.ProgramGetDto;
+import com.damai.properties.ApiVerify;
 import com.damai.scheduletask.PresentationOrderDataTask;
 import com.damai.scheduletask.ReconciliationTask;
 import com.damai.service.OrderService;
@@ -51,6 +52,9 @@ public class OrderController {
     
     @Autowired
     private PresentationOrderDataTask orderDataTask;
+    
+    @Autowired
+    private ApiVerify apiVerify;
     
     @Operation(summary  = "订单创建(不提供给前端调用，只允许内部program服务调用)")
     @PostMapping(value = "/create")
@@ -109,12 +113,14 @@ public class OrderController {
     @Operation(summary  = "对账任务执行")
     @PostMapping(value = "/reconciliation/task")
     public ApiResponse<ReconciliationTaskData> reconciliationTask(@Valid @RequestBody ProgramGetDto programGetDto) {
+        apiVerify.verifyApi();
         return ApiResponse.ok(orderTaskService.reconciliationTask(programGetDto.getId()));
     }
     
     @Operation(summary  = "对账任务执行(全部)")
     @PostMapping(value = "/reconciliation/task/all")
     public ApiResponse<ReconciliationTaskData> reconciliationTaskAll() {
+        apiVerify.verifyApi();
         reconciliationTask.reconciliationTask();
         return ApiResponse.ok();
     }
