@@ -91,7 +91,7 @@ public class DelayOrderCancelSend {
                 updateMessageProducerRecordDto.setMessageSendStatus(MessageSendStatus.SEND_FAIL.getCode());
                 updateMessageProducerRecordDto.setMessageSendException(e.getMessage());
             }
-            //更新消息发送
+            //更新消息发送记录
             apiDataClient.updateMessageProducerRecord(updateMessageProducerRecordDto);
         });
     }
