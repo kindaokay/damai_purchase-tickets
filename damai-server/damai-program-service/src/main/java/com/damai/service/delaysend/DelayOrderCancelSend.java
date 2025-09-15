@@ -61,7 +61,6 @@ public class DelayOrderCancelSend {
             delayOrderCancelMessageModule.setOrderNumber(delayOrderCancelDto.getOrderNumber());
             
             String messageContent = JSON.toJSONString(delayOrderCancelMessageModule);
-            //记录消息发送日志
             InsertMessageProducerRecordDto insertMessageProducerRecordDto = new InsertMessageProducerRecordDto();
             insertMessageProducerRecordDto.setMessageType(MessageType.DELAY_ORDER_CANCEL.getCode());
             insertMessageProducerRecordDto.setMessageTraceId(messageTraceId);
@@ -83,15 +82,12 @@ public class DelayOrderCancelSend {
                 log.info("延迟订单取消消息进行发送 消息体 : {}",messageContent);
                 delayQueueContext.sendMessage(SpringUtil.getPrefixDistinctionName() + "-" + DELAY_ORDER_CANCEL_TOPIC,
                         messageContent, DELAY_ORDER_CANCEL_TIME, DELAY_ORDER_CANCEL_TIME_UNIT);
-                //发送成功，更新发送成功状态
                 updateMessageProducerRecordDto.setMessageSendStatus(MessageSendStatus.SEND_SUCCESS.getCode());
             }catch (Exception e) {
                 log.error("send message error message : {}",messageContent,e);
-                //发送失败，更新发送失败状态
                 updateMessageProducerRecordDto.setMessageSendStatus(MessageSendStatus.SEND_FAIL.getCode());
                 updateMessageProducerRecordDto.setMessageSendException(e.getMessage());
             }
-            //更新消息发送记录
             apiDataClient.updateMessageProducerRecord(updateMessageProducerRecordDto);
         });
     }

@@ -64,7 +64,6 @@ public class MessageRecordService {
     
     public IPage<MessageRecordVo> page(MessageRecordDto messageRecordDto) {
         IPage<MessageRecordVo> messageRecordVoPage = new Page<>(messageRecordDto.getPageNumber(), messageRecordDto.getPageSize());
-        //查看消息发送记录
         IPage<MessageProducerRecord> messageProducerRecordPage =
                 messageProducerRecordMapper.selectPage(PageUtil.getPageParams(messageRecordDto.getPageNumber(),
                         messageRecordDto.getPageSize()), Wrappers.lambdaQuery(MessageProducerRecord.class)
@@ -73,12 +72,10 @@ public class MessageRecordService {
         if (CollectionUtil.isEmpty(messageProducerRecordList)) {
             return messageRecordVoPage;
         }
-        //消息发送记录的消息id查询对应的消息消费记录
         List<MessageConsumerRecord> messageConsumerRecordList = 
                 messageConsumerRecordMapper.selectList(Wrappers.lambdaQuery(MessageConsumerRecord.class)
                         .in(MessageConsumerRecord::getMessageId, messageProducerRecordList.stream()
                                 .map(MessageProducerRecord::getMessageId).toList()));
-        //转成map结构，key:消息id，value：消息消费记录
         Map<Long, MessageConsumerRecord> messageConsumerRecordMap = messageConsumerRecordList.stream().collect(
                 Collectors.toMap(MessageConsumerRecord::getMessageId, v -> v, 
                         (v1, v2) -> v2));
@@ -113,7 +110,6 @@ public class MessageRecordService {
         if (Objects.isNull(existMessageProducerRecord)) {
             throw new DaMaiFrameException(BaseCode.MESSAGE_NOT_EXIST);
         }
-        //如果已经是对账成功的消息，则直接返回成功
         if (ReconciliationStatus.RECONCILIATION_SUCCESS.getCode().equals(existMessageProducerRecord.getReconciliationStatus())) {
             return true;
         }
@@ -134,34 +130,24 @@ public class MessageRecordService {
                 if (CollectionUtil.isEmpty(noReconciliationMessageProducerRecordList)) {
                     continue;
                 }
-                //查询对应的消息消费记录
-                //key:消息id，value:消息消费记录
                 Map<Long, MessageConsumerRecord> messageConsumerRecordMap = getMessageConsumerRecordMap(noReconciliationMessageProducerRecordList.stream()
                         .map(MessageProducerRecord::getMessageId).toList());
                 
-                //执行对账的逻辑
                 for (MessageProducerRecord messageProducerRecord : noReconciliationMessageProducerRecordList){
-                    //获取对应的消费记录
                     MessageConsumerRecord messageConsumerRecord =
                             messageConsumerRecordMap.get(messageProducerRecord.getMessageId());
-                    //没有消费记录，说明消息没有被消费，重新发送消息
-                    //有消费记录，消费是未消费状态，说明有了消费记录后，直接宕机了，所以需要重新发送消息
-                    //有消费记录，消费是失败状态，也需要重新发送消息
                     if (Objects.isNull(messageConsumerRecord) ||
                             messageConsumerRecord.getMessageConsumerStatus().equals(MessageConsumerStatus.UNCONSUMED.getCode()) ||
                             messageConsumerRecord.getMessageConsumerStatus().equals(MessageConsumerStatus.CONSUMER_FAIL.getCode())) {
                         ReconciliationTask reconciliationTask = () -> {
                             exceptionMessageHandlerContext.getExceptionMessageHandler(messageType).handle(messageProducerRecord);
                         };
-                        //执行重新发送消息任务
                         reconciliationTaskQueue.putTask(reconciliationTask);
                     }else {
                         Integer messageSendStatus = messageProducerRecord.getMessageSendStatus();
                         Integer messageConsumerStatus = messageConsumerRecord.getMessageConsumerStatus();
-                        //如果发送成功并且消费成功，那么更新对账成功
                         if (messageSendStatus.equals(MessageSendStatus.SEND_SUCCESS.getCode()) &&
                                 messageConsumerStatus.equals(MessageConsumerStatus.CONSUMER_SUCCESS.getCode())) {
-                            //更新对账成功
                             messageProducerRecordService.updateToReconciliationSuccess(messageProducerRecord,messageConsumerRecord);
                         }
                     }

@@ -85,9 +85,7 @@ public class MessageProducerRecordService extends ServiceImpl<MessageProducerRec
         MessageProducerRecord updateMessageProducerRecord = new MessageProducerRecord();
         updateMessageProducerRecord.setId(oldMessageProducerRecord.getId());
         updateMessageProducerRecord.setReconciliationStatus(ReconciliationStatus.RECONCILIATION_SUCCESS.getCode());
-        //更新消息发送记录为对账成功
         updateById(updateMessageProducerRecord);
-        //更新消息消费记录为对账成功
         MessageConsumerRecord updateMessageConsumerRecord = new MessageConsumerRecord();
         updateMessageConsumerRecord.setId(oldMessageConsumerRecord.getId());
         updateMessageConsumerRecord.setReconciliationStatus(ReconciliationStatus.RECONCILIATION_SUCCESS.getCode());

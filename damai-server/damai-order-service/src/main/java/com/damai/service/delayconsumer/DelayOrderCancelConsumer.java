@@ -64,20 +64,15 @@ public class DelayOrderCancelConsumer implements ConsumerTask {
             return;
         }
         
-        //查询已存在的消息消费记录
         MessageConsumerRecordVo existMessageConsumerRecordVo = apiResponse.getData();
         
-        //如果消息已经被成功消费过，直接确认消息，避免重复消费
         if (Objects.nonNull(existMessageConsumerRecordVo) &&
                 existMessageConsumerRecordVo.getMessageConsumerStatus().equals(MessageConsumerStatus.CONSUMER_SUCCESS.getCode())) {
             return;
         }
         Long messageConsumerRecordId = null;
-        //消息的消费次数
         Integer messageConsumerCount;
-        // 如果是第一次消费该消息，记录消息到数据库
         if (Objects.isNull(existMessageConsumerRecordVo)) {
-            // 记录消息添加
             InsertMessageConsumerRecordDto insertMessageConsumerRecordDto = new InsertMessageConsumerRecordDto();
             insertMessageConsumerRecordDto.setMessageId(messageId);
             insertMessageConsumerRecordDto.setMessageTraceId(messageTraceId);
@@ -95,17 +90,14 @@ public class DelayOrderCancelConsumer implements ConsumerTask {
             messageConsumerCount = saveMessageConsumerRecordVo.getMessageConsumerCount();
         }else {
             messageConsumerRecordId = existMessageConsumerRecordVo.getId();
-            //如果消费记录存在了，说明不是第一次消费该消息，那么消费次数+1
             messageConsumerCount = existMessageConsumerRecordVo.getMessageConsumerCount() + 1;
         }
-        //根据业务执行的成功或者失败来更新消费记录
         UpdateMessageConsumerRecordDto updateMessageConsumerRecordDto = new UpdateMessageConsumerRecordDto();
         updateMessageConsumerRecordDto.setId(messageConsumerRecordId);
         updateMessageConsumerRecordDto.setMessageConsumerCount(messageConsumerCount);
         updateMessageConsumerRecordDto.setConsumerTime(DateUtils.now());
         
         try {
-            //取消订单
             OrderCancelDto orderCancelDto = new OrderCancelDto();
             orderCancelDto.setOrderNumber(orderNumber);
             boolean cancel = orderService.cancel(orderCancelDto);
@@ -118,7 +110,6 @@ public class DelayOrderCancelConsumer implements ConsumerTask {
                 updateMessageConsumerRecordDto.setMessageConsumerException("订单取消失败");
             }
         } catch (DaMaiFrameException e) {
-            //对于这种业务异常，消费记录也算成功，避免消息一直重试消费
             updateMessageConsumerRecordDto.setMessageConsumerStatus(MessageConsumerStatus.CONSUMER_SUCCESS.getCode());
         } catch (Exception e) {
             updateMessageConsumerRecordDto.setMessageConsumerStatus(MessageConsumerStatus.CONSUMER_FAIL.getCode());
