@@ -22,7 +22,6 @@ import com.damai.mapper.MessageProducerRecordMapper;
 import com.damai.page.PageUtil;
 import com.damai.reconciliation.ReconciliationTask;
 import com.damai.reconciliation.ReconciliationTaskQueue;
-import com.damai.util.DateUtils;
 import com.damai.vo.MessageRecordVo;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
@@ -171,9 +170,8 @@ public class MessageRecordService {
     
     @Transactional(rollbackFor = Exception.class)
     public void deleteMessageRecord(Date date){
-        //把今天的消息记录数据删除掉，真实环境中不会删除的，这里是为了在线演示才删除的，要不然数据太多了
-        String dateStr = DateUtils.format(date, DateUtils.FORMAT_DATE);
-        messageProducerRecordMapper.deleteBySendTime(dateStr);
-        messageConsumerRecordMapper.deleteByConsumerTime(dateStr);
+        //把之前的消息记录数据删除掉，真实环境中不会删除的，这里是为了在线演示才删除的，要不然数据太多了
+        messageProducerRecordMapper.delete();
+        messageConsumerRecordMapper.delete();
     }
 }
