@@ -83,7 +83,7 @@ public class PresentationOrderDataTask {
     private DiscardOrder simulationDiscardOrder(){
         //模拟废弃订单数据
         OrderCreateMq orderCreateMq = new OrderCreateMq();
-        orderCreateMq.setCreateOrderTime(DateUtils.parse(1757516177000L));
+        orderCreateMq.setCreateOrderTime(DateUtils.now());
         orderCreateMq.setIdentifierId(1421864797540605952L);
         orderCreateMq.setOrderNumber(1965791442215448582L);
         orderCreateMq.setOrderPrice(new BigDecimal(2000));
@@ -92,13 +92,13 @@ public class PresentationOrderDataTask {
         orderCreateMq.setProgramItemPicture("https://s21.ax1x.com/2024/06/07/pkYzl9J.jpg");
         orderCreateMq.setProgramPermitChooseSeat(0);
         orderCreateMq.setProgramPlace("工人体育馆");
-        orderCreateMq.setProgramShowTime(DateUtils.parse(1758371400000L));
+        orderCreateMq.setProgramShowTime(DateUtils.addWeek(DateUtils.addHour(DateUtils.now(), -4), 1));
         orderCreateMq.setProgramTitle("周杰伦“嘉年华”世界巡回演唱会");
         orderCreateMq.setUserId(1421653760027484162L);
         
         List<OrderTicketUserCreateDto> orderTicketUserCreateDtoList = new ArrayList<>();
         OrderTicketUserCreateDto orderTicketUserCreateDto = new OrderTicketUserCreateDto();
-        orderTicketUserCreateDto.setCreateOrderTime(DateUtils.parse(1757516177000L));
+        orderTicketUserCreateDto.setCreateOrderTime(DateUtils.now());
         orderTicketUserCreateDto.setOrderNumber(1965791442215448582L);
         orderTicketUserCreateDto.setOrderPrice(new BigDecimal(2000));
         orderTicketUserCreateDto.setProgramId(34L);
