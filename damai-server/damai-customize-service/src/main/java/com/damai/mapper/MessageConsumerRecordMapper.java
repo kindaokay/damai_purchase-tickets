@@ -13,10 +13,9 @@ import org.apache.ibatis.annotations.Delete;
 public interface MessageConsumerRecordMapper extends BaseMapper<MessageConsumerRecord> {
     
     /**
-     * 根据消费时间删除数据
-     * @param consumerTime 消费时间
-     * @return 删除数量
-     */
-    @Delete("DELETE FROM d_message_consumer_record where DATE_FORMAT(consumer_time, '%Y-%m-%d') = #{consumerTime}")
-    Integer deleteByConsumerTime(String consumerTime);
+     * 删除所有记录 
+     * @return Integer 结果
+     * */
+    @Delete("DELETE FROM d_message_consumer_record")
+    Integer delete();
 }

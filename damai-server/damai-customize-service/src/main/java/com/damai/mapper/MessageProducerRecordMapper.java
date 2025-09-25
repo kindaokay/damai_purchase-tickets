@@ -12,6 +12,10 @@ import org.apache.ibatis.annotations.Delete;
  **/
 public interface MessageProducerRecordMapper extends BaseMapper<MessageProducerRecord> {
     
-    @Delete("DELETE FROM d_message_producer_record where DATE_FORMAT(send_time, '%Y-%m-%d') = #{sendTime}")
-    Integer deleteBySendTime(String sendTime);
+    /** 
+     * 删除所有记录 
+     * @return Integer 结果
+     * */
+    @Delete("DELETE FROM d_message_producer_record")
+    Integer delete();
 }

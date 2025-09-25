@@ -8,8 +8,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-import java.util.Date;
-
 /**
  * @program: 极度真实还原大麦网高并发实战项目。 添加 阿星不是程序员 微信，添加时备注 大麦 来获取项目的完整资料 
  * @description: 删除消息记录定时任务
@@ -25,7 +23,8 @@ public class PresentationMessageRecordTask {
     @Scheduled(cron = "0 0 23 * * ?")
     public void executeTask(){
         BusinessThreadPool.execute( () -> {
-            //删除当天的消息记录数据
+            //删除所有的消息记录数据
+            log.info("开始删除所有消息记录数据");
             messageRecordService.deleteMessageRecord(DateUtils.now());
         });
     }
