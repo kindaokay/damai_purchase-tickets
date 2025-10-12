@@ -155,7 +155,46 @@ public class SnowflakeIdGenerator {
             | sequence;
     }
     
-    public synchronized long getOrderNumber(long userId,long tableCount) {
+    /**
+     * 生成订单编号（优化版 - 包含完整分库分表基因）
+     * 核心改进：订单编号的最后N位完全来自用户ID，确保：
+     * - 用订单编号查询和用用户ID查询的分库分表位置完全一致
+     * - N = log2(tableCount) + log2(databaseCount)
+     * 
+     * @param userId 用户ID
+     * @param tableCount 分表数量（必须是2的幂次方）
+     * @param databaseCount 分库数量（必须是2的幂次方）
+     * @return 订单编号
+     */
+    public synchronized long getOrderNumber(long userId, long tableCount, long databaseCount) {
+        long timestamp = getBase();
+        
+        // 计算总基因位数 = 表基因位数 + 库基因位数
+        long tableGeneLength = log2N(tableCount);
+        long databaseGeneLength = log2N(databaseCount);
+        long totalGeneLength = tableGeneLength + databaseGeneLength;
+        
+        // 创建基因掩码，用于提取用户ID的后N位
+        long geneMask = (1L << totalGeneLength) - 1;
+        
+        // 从用户ID中提取后N位作为完整基因（包含表基因+库基因）
+        long userGene = userId & geneMask;
+        
+        // 生成订单编号：
+        // [时间戳部分][数据中心ID][机器ID][序列号][用户基因]
+        return ((timestamp - BASIS_TIME) << timestampLeftShift)
+                | (datacenterId << datacenterIdShift)
+                | (workerId << workerIdShift)
+                | (sequence << totalGeneLength)
+                | userGene;
+    }
+    
+    /**
+     * 兼容旧版本的方法（仅包含表基因）
+     * @deprecated 建议使用 getOrderNumber(userId, tableCount, databaseCount)
+     */
+    @Deprecated
+    public synchronized long getOrderNumber(long userId, long tableCount) {
         long timestamp = getBase();
         long sequenceShift = log2N(tableCount);
         return ((timestamp - BASIS_TIME) << timestampLeftShift)

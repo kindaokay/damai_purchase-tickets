@@ -56,6 +56,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import static com.damai.constant.Constant.GLIDE_LINE;
+import static com.damai.constant.ProgramOrderConstant.ORDER_DATABASE_COUNT;
 import static com.damai.constant.ProgramOrderConstant.ORDER_TABLE_COUNT;
 
 /**
@@ -351,7 +352,7 @@ public class ProgramOrderService {
                                                  Integer orderVersion){
         ProgramVo programVo = programService.simpleGetProgramAndShowMultipleCache(programOrderCreateDto.getProgramId());
         OrderCreateDto orderCreateDto = new OrderCreateDto();
-        orderCreateDto.setOrderNumber(uidGenerator.getOrderNumber(programOrderCreateDto.getUserId(),ORDER_TABLE_COUNT));
+        orderCreateDto.setOrderNumber(uidGenerator.getOrderNumber(programOrderCreateDto.getUserId(),ORDER_TABLE_COUNT,ORDER_DATABASE_COUNT));
         orderCreateDto.setProgramId(programOrderCreateDto.getProgramId());
         orderCreateDto.setProgramItemPicture(programVo.getItemPicture());
         orderCreateDto.setUserId(programOrderCreateDto.getUserId());
@@ -393,7 +394,7 @@ public class ProgramOrderService {
     private OrderCreateDto buildCreateOrderParamV2(Long programId,Long userId,List<PurchaseSeat> purchaseSeatList,Integer orderVersion){
         ProgramVo programVo = programService.simpleGetProgramAndShowMultipleCache(programId);
         OrderCreateDto orderCreateDto = new OrderCreateDto();
-        orderCreateDto.setOrderNumber(uidGenerator.getOrderNumber(userId,ORDER_TABLE_COUNT));
+        orderCreateDto.setOrderNumber(uidGenerator.getOrderNumber(userId,ORDER_TABLE_COUNT,ORDER_DATABASE_COUNT));
         orderCreateDto.setProgramId(programId);
         orderCreateDto.setProgramItemPicture(programVo.getItemPicture());
         orderCreateDto.setUserId(userId);

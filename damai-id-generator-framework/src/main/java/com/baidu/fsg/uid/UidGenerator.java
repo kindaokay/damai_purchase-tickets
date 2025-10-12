@@ -42,8 +42,19 @@ public interface UidGenerator {
      * 获取订单编号
      * @param userId 用户id
      * @param tableCount 分表数量
+     * @param databaseCount 分库数量
      * @return 结果
      * */
+    long getOrderNumber(long userId,long tableCount,long databaseCount);
+    
+    /**
+     * 获取订单编号 （兼容旧版本的方法仅包含表基因）
+     * @deprecated 建议使用 getOrderNumber(userId, tableCount, databaseCount)
+     * @param userId 用户id
+     * @param tableCount 分表数量
+     * @return 结果
+     * */
+    @Deprecated
     long getOrderNumber(long userId,long tableCount);
 
     /**
