@@ -26,4 +26,11 @@ public class SpringUtil implements ApplicationContextInitializer<ConfigurableApp
     public void initialize(final ConfigurableApplicationContext applicationContext) {
         configurableApplicationContext = applicationContext;
     }
+    
+    public static <T> T getBean(Class<T> requiredType){
+        return configurableApplicationContext.getBean(requiredType);
+    }
+    public static <T> T getBean(String name, Class<T> requiredType){
+        return configurableApplicationContext.getBean(name,requiredType);
+    }
 }

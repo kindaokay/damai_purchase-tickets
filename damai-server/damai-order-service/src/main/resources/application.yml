@@ -18,6 +18,7 @@ spring:
     name: ${prefix.distinction.name:damai}-order-service
   main:
     allow-bean-definition-overriding: true
+    allow-circular-references: true
   mvc:
     pathmatch:
       matching-strategy: ant_path_matcher
@@ -77,6 +78,12 @@ mybatis-plus:
   configuration:
     log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
     local-cache-scope: statement
+
+# 分片配置（用于虚拟分片基因位提取）
+sharding:
+  original:
+    database-count: 2      # 原始分库数量
+    table-count: 4         # 原始分表数量
 feign:
   sentinel:
     enabled: false

@@ -156,37 +156,44 @@ public class SnowflakeIdGenerator {
     }
     
     /**
-     * 生成订单编号（优化版 - 包含完整分库分表基因）
-     * 核心改进：订单编号的最后N位完全来自用户ID，确保：
-     * - 用订单编号查询和用用户ID查询的分库分表位置完全一致
-     * - N = log2(tableCount) + log2(databaseCount)
+     * 生成订单编号（基因法）
+     * 
+     * 算法逻辑：
+     * 1. 计算表基因位数和库基因位数
+     * 2. 从userId中提取对应的分片基因（后N位）
+     * 3. 将基因嵌入到订单号的低位
+     * 
+     * 示例（2库×4表）：
+     * - 表基因：2位（log2(4) = 2）
+     * - 库基因：1位（log2(2) = 1）
+     * - 总共嵌入3位基因
+     * 
+     * 注意：虚拟分片不需要嵌入基因，通过路由表动态映射实现
      * 
      * @param userId 用户ID
-     * @param tableCount 分表数量（必须是2的幂次方）
-     * @param databaseCount 分库数量（必须是2的幂次方）
+     * @param tableCount 分表数量（必须是2的幂次方，例如4）
+     * @param databaseCount 分库数量（必须是2的幂次方，例如2）
      * @return 订单编号
      */
     public synchronized long getOrderNumber(long userId, long tableCount, long databaseCount) {
         long timestamp = getBase();
         
-        // 计算总基因位数 = 表基因位数 + 库基因位数
-        long tableGeneLength = log2N(tableCount);
-        long databaseGeneLength = log2N(databaseCount);
+        // 步骤1：计算基因位数
+        long tableGeneLength = log2N(tableCount);        // 表基因位数
+        long databaseGeneLength = log2N(databaseCount);  // 库基因位数
         long totalGeneLength = tableGeneLength + databaseGeneLength;
         
-        // 创建基因掩码，用于提取用户ID的后N位
-        long geneMask = (1L << totalGeneLength) - 1;
+        // 步骤2：从userId中提取基因位（后N位）
+        // 例如：userId=1000, totalGeneLength=3, 提取后3位
+        long geneInfo = userId & ((1L << totalGeneLength) - 1);
         
-        // 从用户ID中提取后N位作为完整基因（包含表基因+库基因）
-        long userGene = userId & geneMask;
-        
-        // 生成订单编号：
-        // [时间戳部分][数据中心ID][机器ID][序列号][用户基因]
+        // 步骤3：生成订单编号
+        // 结构：[时间戳][数据中心ID][机器ID][序列号][基因信息]
         return ((timestamp - BASIS_TIME) << timestampLeftShift)
                 | (datacenterId << datacenterIdShift)
                 | (workerId << workerIdShift)
                 | (sequence << totalGeneLength)
-                | userGene;
+                | geneInfo;
     }
     
     /**
