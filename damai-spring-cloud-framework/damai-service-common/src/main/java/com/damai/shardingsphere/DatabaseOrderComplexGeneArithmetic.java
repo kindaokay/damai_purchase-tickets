@@ -44,11 +44,13 @@ public class DatabaseOrderComplexGeneArithmetic implements ComplexKeysShardingAl
         this.tableShardingCount = Integer.parseInt(props.getProperty(TABLE_SHARDING_COUNT_KEY_NAME));
     }
     @Override
-    public Collection<String> doSharding(Collection<String> allActualSplitDatabaseNames, ComplexKeysShardingValue<Long> complexKeysShardingValue) {
+    public Collection<String> doSharding(Collection<String> allActualSplitDatabaseNames, 
+                                         ComplexKeysShardingValue<Long> complexKeysShardingValue) {
         //返回的真实库名集合
         List<String> actualDatabaseNames = new ArrayList<>(allActualSplitDatabaseNames.size());
         //查询中的列名和值
-        Map<String, Collection<Long>> columnNameAndShardingValuesMap = complexKeysShardingValue.getColumnNameAndShardingValuesMap();
+        Map<String, Collection<Long>> columnNameAndShardingValuesMap = 
+                complexKeysShardingValue.getColumnNameAndShardingValuesMap();
         //如果没有条件查询，那么就查所有的分表
         if (CollectionUtil.isEmpty(columnNameAndShardingValuesMap)) {
             return allActualSplitDatabaseNames;
@@ -61,10 +63,12 @@ public class DatabaseOrderComplexGeneArithmetic implements ComplexKeysShardingAl
         Long value = null;
         //如果是order_number查询
         if (CollectionUtil.isNotEmpty(orderNumberValues)) {
-            value = orderNumberValues.stream().findFirst().orElseThrow(() -> new DaMaiFrameException(BaseCode.ORDER_NUMBER_NOT_EXIST));
+            value = orderNumberValues.stream().findFirst()
+                    .orElseThrow(() -> new DaMaiFrameException(BaseCode.ORDER_NUMBER_NOT_EXIST));
             //如果是user_id查询
         } else if (CollectionUtil.isNotEmpty(userIdValues)) {
-            value = userIdValues.stream().findFirst().orElseThrow(() -> new DaMaiFrameException(BaseCode.USER_ID_NOT_EXIST));
+            value = userIdValues.stream().findFirst()
+                    .orElseThrow(() -> new DaMaiFrameException(BaseCode.USER_ID_NOT_EXIST));
         }
         //如果order_number或者user_id的值存在
         if (Objects.nonNull(value)) {
