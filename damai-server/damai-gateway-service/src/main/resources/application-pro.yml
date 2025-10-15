@@ -41,6 +41,15 @@ spring:
             - StripPrefix=2
           metadata:
             title: 订单服务
+            
+        - id: ${prefix.distinction.name:damai}-migrate-service
+          uri: lb://${prefix.distinction.name:damai}-migrate-service
+          predicates:
+            - Path=/damai/migrate/**
+          filters:
+            - StripPrefix=2
+          metadata:
+            title: 迁移服务    
 
         - id: ${prefix.distinction.name:damai}-pay-service
           uri: lb://${prefix.distinction.name:damai}-pay-service

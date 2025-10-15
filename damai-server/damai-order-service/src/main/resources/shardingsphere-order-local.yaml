@@ -82,13 +82,13 @@ rules:
           sharding-count: 2
           table-sharding-count: 4
           strategy: complex
-          algorithmClassName: com.damai.shardingsphere.DatabaseOrderVirtualShardingAlgorithm
+          algorithmClassName: com.damai.shardingsphere.algorithm.DatabaseOrderVirtualShardingAlgorithm
       tableOrderVirtualShardingAlgorithm:
         type: CLASS_BASED
         props:
           sharding-count: 4
           strategy: complex
-          algorithmClassName: com.damai.shardingsphere.TableOrderVirtualShardingAlgorithm
+          algorithmClassName: com.damai.shardingsphere.algorithm.TableOrderVirtualShardingAlgorithm
       databaseOrderTicketUserComplexGeneArithmetic:
         type: CLASS_BASED
         props:

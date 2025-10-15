@@ -5,6 +5,7 @@ import com.damai.entity.Order;
 import com.damai.entity.ShardingRouteMapping;
 import com.damai.mapper.OrderMapper;
 import com.damai.mapper.ShardingRouteMappingMapper;
+import com.damai.shardingsphere.virtualsharding.VirtualShardingAlgorithmFunc;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.shardingsphere.infra.hint.HintManager;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,20 +25,16 @@ import java.util.List;
  */
 @Slf4j
 @Service
-public class VirtualShardMigrationService {
+public class VirtualShardMigrationTask {
     
     @Autowired
-    private VirtualShardingRouteManager routeManager;
+    private ShardingRouteMappingMapper shardingRouteMappingMapper;
     
     @Autowired
-    private ShardingRouteMappingMapper routeMappingMapper;
-    
-    @Autowired
-    private OrderMapper orderMapper;  // 需要注入订单Mapper
+    private OrderMapper orderMapper;
     
     /**
      * 迁移指定原表的后半部分数据到新表
-     *
      * 注意：
      * 1. 订单表的id是雪花算法生成（自增但不连续）
      * 2. order_number是基因法生成（自增但不连续）
@@ -52,46 +49,48 @@ public class VirtualShardMigrationService {
      * @return 迁移的数据条数
      */
     @Transactional(rollbackFor = Exception.class)
-    public int migrateTableData(String sourceDatabase,
-                                String sourceTable,
-                                String targetDatabase,
-                                String targetTable,
-                                int startShardId,
-                                int endShardId) {
-        
+    public int migrateTableData(String sourceDatabase, String sourceTable, String targetDatabase, String targetTable,
+                                int startShardId, int endShardId) {
         log.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
         log.info("开始迁移数据：{}.{} → {}.{}", sourceDatabase, sourceTable, targetDatabase, targetTable);
         log.info("虚拟分片范围：{}-{}", startShardId, endShardId);
         log.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
         
         // 步骤1：分批查询源表数据
-        int pageSize = 1000;  // 每批处理1000条
-        long lastId = 0;      // 使用id作为游标（雪花ID自增）
+        
+        // 每批处理1000条
+        int pageSize = 1000;
+        // 使用id作为游标（雪花ID自增）
+        long lastId = 0;      
         int totalMigrated = 0;
         int batchCount = 0;
         
         while (true) {
             batchCount++;
-            
-            // 使用 HintManager 强制路由到指定的物理表（绕过分片逻辑）
+            // 使用 HintManager 强制路由的分片算法到指定的物理表
             List<Order> orders;
             try (HintManager hintManager = HintManager.getInstance()) {
                 // 步骤1：强制指定数据源（如 damai_order_0）
                 // 从完整库名中提取后缀（damai_order_0 → 0）
                 String dbSuffix = extractDatabaseSuffix(sourceDatabase);
-                hintManager.addDatabaseShardingValue("d_order", dbSuffix);  // 逻辑表名, 库后缀
+                // 逻辑表名, 库后缀
+                hintManager.addDatabaseShardingValue("d_order", dbSuffix);  
                 
                 // 步骤2：强制指定表（如 d_order_0）
                 // 从完整表名中提取后缀（d_order_0 → 0）
                 String tableSuffix = extractTableSuffix(sourceTable);
-                hintManager.addTableShardingValue("d_order", tableSuffix);  // 逻辑表名, 表后缀
+                // 逻辑表名, 表后缀
+                hintManager.addTableShardingValue("d_order", tableSuffix);  
                 
-                // 步骤3：执行查询（此时不会走自动分片路由，而是直接查询指定的物理表）
+                // 步骤3：执行查询（此时直接查询指定的物理表）
                 orders = orderMapper.selectList(
                         Wrappers.lambdaQuery(Order.class)
-                                .gt(Order::getId, lastId)  // id > lastId
-                                .orderByAsc(Order::getId)   // 按id升序
-                                .last("LIMIT " + pageSize)  // 限制条数
+                                // id > lastId
+                                .gt(Order::getId, lastId)
+                                // 按id升序
+                                .orderByAsc(Order::getId)
+                                // 限制条数
+                                .last("LIMIT " + pageSize)  
                 );
             }  // try-with-resources 自动关闭 HintManager，清理 ThreadLocal
             
@@ -104,7 +103,7 @@ public class VirtualShardMigrationService {
             List<Order> toMigrate = new ArrayList<>();
             for (Order order : orders) {
                 // 计算该订单对应的虚拟分片ID
-                int logicalShardId = routeManager.calculateLogicalShardId(order.getOrderNumber());
+                int logicalShardId = VirtualShardingAlgorithmFunc.calculateLogicalShardId(order.getOrderNumber());
                 
                 // 判断是否在目标虚拟分片范围内
                 if (logicalShardId >= startShardId && logicalShardId <= endShardId) {
@@ -130,23 +129,16 @@ public class VirtualShardMigrationService {
                 }
                 
                 totalMigrated += toMigrate.size();
-                log.info("第{}批：查询{}条，迁移{}条，累计迁移{}条",
-                        batchCount, orders.size(), toMigrate.size(), totalMigrated);
+                log.info("第{}批：查询{}条，迁移{}条，累计迁移{}条", batchCount, orders.size(), toMigrate.size(), totalMigrated);
             } else {
-                log.debug("第{}批：查询{}条，无需迁移", batchCount, orders.size());
+                log.info("第{}批：查询{}条，无需迁移", batchCount, orders.size());
             }
             
             // 步骤4：更新游标
             lastId = orders.get(orders.size() - 1).getId();
             
             // 步骤5：防止过快，可选的休眠
-            if (batchCount % 10 == 0) {
-                try {
-                    Thread.sleep(100);  // 每10批休眠100ms，降低数据库压力
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                }
-            }
+            sleep(batchCount);
         }
         
         log.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
@@ -154,6 +146,19 @@ public class VirtualShardMigrationService {
         log.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
         
         return totalMigrated;
+    }
+    
+    public void sleep(int batchCount){
+        // 步骤5：防止过快，可选的休眠
+        final int ten = 10;
+        if (batchCount % ten == 0) {
+            try {
+                // 每10批休眠100ms，降低数据库压力
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }
     }
     
     /**
@@ -174,7 +179,6 @@ public class VirtualShardMigrationService {
                                         String sourceTable,
                                         String targetDatabase,
                                         String targetTable) {
-        
         log.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
         log.info("开始迁移虚拟分片范围：{}-{}", startShardId, endShardId);
         log.info("源库表：{}.{}", sourceDatabase, sourceTable);
@@ -188,11 +192,11 @@ public class VirtualShardMigrationService {
         
         log.info("✓ 数据迁移完成：迁移了 {} 条数据", migratedCount);
         
-        // 步骤2：批量更新路由表
+        // 步骤2：批量更新虚拟分片路由映射表
         // 从表名中提取表后缀（如 d_order_4 → 4）
         int targetTableSuffix = extractTableSuffixInt(targetTable);
-        
-        int updatedCount = routeMappingMapper.update(
+        // 进行更新
+        int updatedCount = shardingRouteMappingMapper.update(
                 null,
                 Wrappers.lambdaUpdate(ShardingRouteMapping.class)
                         .set(ShardingRouteMapping::getPhysicalDatabaseSuffix, getDatabaseSuffix(targetDatabase))
@@ -202,10 +206,10 @@ public class VirtualShardMigrationService {
                         .le(ShardingRouteMapping::getLogicalShardId, endShardId)
         );
         
-        log.info("✓ 路由表更新完成：更新了 {} 条记录", updatedCount);
+        log.info("✓ 虚拟分片路由映射表更新完成：更新了 {} 条记录", updatedCount);
         
         // 步骤3：刷新缓存
-        routeManager.reloadRouteMapping();
+        //TODO
         log.info("✓ 路由缓存刷新完成");
         
         log.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
@@ -237,7 +241,7 @@ public class VirtualShardMigrationService {
         int originalTableSuffix = extractTableSuffixInt(originalTable);
         
         // 更新路由表，恢复到原始映射
-        int updatedCount = routeMappingMapper.update(
+        int updatedCount = shardingRouteMappingMapper.update(
                 null,
                 Wrappers.lambdaUpdate(ShardingRouteMapping.class)
                         .set(ShardingRouteMapping::getPhysicalDatabaseSuffix, getDatabaseSuffix(originalDatabase))
@@ -248,7 +252,7 @@ public class VirtualShardMigrationService {
         );
         
         // 刷新缓存
-        routeManager.reloadRouteMapping();
+        //TODO
         
         log.info("✅ 回滚完成，虚拟分片 {}-{} 已恢复到 {}.{}",
                 startShardId, endShardId, originalDatabase, originalTable);
@@ -309,7 +313,7 @@ public class VirtualShardMigrationService {
             // 过滤需要删除的数据（只删除已迁移的数据）
             List<Long> toDeleteIds = new ArrayList<>();
             for (Order order : orders) {
-                int logicalShardId = routeManager.calculateLogicalShardId(order.getOrderNumber());
+                int logicalShardId = VirtualShardingAlgorithmFunc.calculateLogicalShardId(order.getOrderNumber());
                 
                 if (logicalShardId >= startShardId && logicalShardId <= endShardId) {
                     toDeleteIds.add(order.getId());
@@ -325,28 +329,22 @@ public class VirtualShardMigrationService {
                     hintManager.addDatabaseShardingValue("d_order", dbSuffix);
                     hintManager.addTableShardingValue("d_order", tableSuffix);
                     
-                    // 批量删除（分批进行，避免一次删除过多）
-                    int deleteCount = orderMapper.deleteBatchIds(toDeleteIds);
+                    // 物理批量删除（分批进行，避免一次删除过多）
+                    int deleteCount = orderMapper.physicalDeleteByIds(toDeleteIds);
                     totalDeleted += deleteCount;
                     
                     log.info("第{}批：查询{}条，删除{}条，累计删除{}条",
                             batchCount, orders.size(), deleteCount, totalDeleted);
                 }
             } else {
-                log.debug("第{}批：查询{}条，无需删除", batchCount, orders.size());
+                log.info("第{}批：查询{}条，无需删除", batchCount, orders.size());
             }
             
             // 更新游标
             lastId = orders.get(orders.size() - 1).getId();
             
             // 防止过快
-            if (batchCount % 10 == 0) {
-                try {
-                    Thread.sleep(100);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                }
-            }
+            sleep(batchCount);
         }
         
         log.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
@@ -358,8 +356,8 @@ public class VirtualShardMigrationService {
     
     /**
      * 从表名中提取表后缀
-     * @param tableName 完整表名（如 d_order_4、d_order_ticket_user_7）
-     * @return 表后缀字符串（如 "4"、"7"）- 注意返回字符串，因为 HintManager 需要
+     * @param tableName 完整表名（如 d_order_4）
+     * @return 表后缀字符串如 "4" - 注意返回字符串，因为 HintManager 需要
      */
     private String extractTableSuffix(String tableName) {
         // 获取最后一个下划线后的数字

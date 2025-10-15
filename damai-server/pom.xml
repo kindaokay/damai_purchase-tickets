@@ -18,6 +18,7 @@
 
     <modules>
         <module>damai-order-service</module>
+        <module>damai-migrate-service</module>
         <module>damai-gateway-service</module>
         <module>damai-base-data-service</module>
         <module>damai-user-service</module>
