@@ -34,4 +34,11 @@ public interface OrderClient {
      * */
     @PostMapping("/order/account/order/count")
     ApiResponse<AccountOrderCountVo> accountOrderCount(AccountOrderCountDto dto);
+    
+    /**
+     * 重置虚拟分片路由缓存
+     * @return 结果
+     * */
+    @PostMapping(value = "/order/reload/route/mapping/cache")
+    ApiResponse<Void> reloadRouteMappingCache();
 }

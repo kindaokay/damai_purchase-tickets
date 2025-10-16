@@ -56,8 +56,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import static com.damai.constant.Constant.GLIDE_LINE;
-import static com.damai.constant.ProgramOrderConstant.ORDER_DATABASE_COUNT;
-import static com.damai.constant.ProgramOrderConstant.ORDER_TABLE_COUNT;
+import static com.damai.constant.ProgramOrderConstant.ORIGINAL_DATABASE_COUNT;
+import static com.damai.constant.ProgramOrderConstant.ORIGINAL_TABLE_COUNT;
 
 /**
  * @program: 极度真实还原大麦网高并发实战项目。 添加 阿星不是程序员 微信，添加时备注 大麦 来获取项目的完整资料 
@@ -352,7 +352,7 @@ public class ProgramOrderService {
                                                  Integer orderVersion){
         ProgramVo programVo = programService.simpleGetProgramAndShowMultipleCache(programOrderCreateDto.getProgramId());
         OrderCreateDto orderCreateDto = new OrderCreateDto();
-        orderCreateDto.setOrderNumber(uidGenerator.getOrderNumber(programOrderCreateDto.getUserId(),ORDER_TABLE_COUNT,ORDER_DATABASE_COUNT));
+        orderCreateDto.setOrderNumber(uidGenerator.getOrderNumber(programOrderCreateDto.getUserId(),ORIGINAL_TABLE_COUNT,ORIGINAL_DATABASE_COUNT));
         orderCreateDto.setProgramId(programOrderCreateDto.getProgramId());
         orderCreateDto.setProgramItemPicture(programVo.getItemPicture());
         orderCreateDto.setUserId(programOrderCreateDto.getUserId());
@@ -394,7 +394,7 @@ public class ProgramOrderService {
     private OrderCreateDto buildCreateOrderParamV2(Long programId,Long userId,List<PurchaseSeat> purchaseSeatList,Integer orderVersion){
         ProgramVo programVo = programService.simpleGetProgramAndShowMultipleCache(programId);
         OrderCreateDto orderCreateDto = new OrderCreateDto();
-        orderCreateDto.setOrderNumber(uidGenerator.getOrderNumber(userId,ORDER_TABLE_COUNT,ORDER_DATABASE_COUNT));
+        orderCreateDto.setOrderNumber(uidGenerator.getOrderNumber(userId,ORIGINAL_TABLE_COUNT,ORIGINAL_DATABASE_COUNT));
         orderCreateDto.setProgramId(programId);
         orderCreateDto.setProgramItemPicture(programVo.getItemPicture());
         orderCreateDto.setUserId(userId);

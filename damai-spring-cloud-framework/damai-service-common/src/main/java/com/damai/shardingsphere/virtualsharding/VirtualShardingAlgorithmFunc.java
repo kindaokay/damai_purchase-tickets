@@ -1,15 +1,10 @@
 package com.damai.shardingsphere.virtualsharding;
 
+import static com.damai.constant.ProgramOrderConstant.ORIGINAL_DATABASE_COUNT;
+import static com.damai.constant.ProgramOrderConstant.ORIGINAL_TABLE_COUNT;
+import static com.damai.constant.ProgramOrderConstant.VIRTUAL_SHARD_COUNT;
+
 public class VirtualShardingAlgorithmFunc {
-    
-    /** 原始分库数量 */
-    public static final int ORIGINAL_DATABASE_COUNT = 2;
-    
-    /** 原始分表数量 */
-    public static final int ORIGINAL_TABLE_COUNT = 4;
-    
-    /** 虚拟分片总数（固定） */
-    private static final int VIRTUAL_SHARD_COUNT = 1024;
     
     /**
      * 计算虚拟分片ID

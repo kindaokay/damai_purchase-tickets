@@ -76,23 +76,4 @@ public class TableOrderVirtualShardingAlgorithm implements ComplexKeysShardingAl
         }
         return allActualSplitTableNames;
     }
-    
-    /**
-     * 将逻辑表名转换为物理表前缀
-     * 例如：t_order → d_order
-     *      t_order_ticket_user → d_order_ticket_user
-     */
-    private String convertLogicTableToPhysicalPrefix(String logicTableName) {
-        // 根据实际业务调整映射规则
-        if (logicTableName.equals("d_order")) {
-            return "d_order";
-        } else if (logicTableName.equals("d_order_ticket_user")) {
-            return "d_order_ticket_user";
-        } else if (logicTableName.equals("d_order_ticket_user_record")) {
-            return "d_order_ticket_user_record";
-        }
-        
-        // 默认：将 t_ 替换为 d_
-        return logicTableName.replace("t_", "d_");
-    }
 }

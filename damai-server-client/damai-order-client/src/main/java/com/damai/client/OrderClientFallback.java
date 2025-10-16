@@ -24,4 +24,9 @@ public class OrderClientFallback implements OrderClient {
     public ApiResponse<AccountOrderCountVo> accountOrderCount(final AccountOrderCountDto dto) {
         return ApiResponse.error(BaseCode.SYSTEM_ERROR);
     }
+    
+    @Override
+    public ApiResponse<Void> reloadRouteMappingCache() {
+        return ApiResponse.error(BaseCode.SYSTEM_ERROR);
+    }
 }

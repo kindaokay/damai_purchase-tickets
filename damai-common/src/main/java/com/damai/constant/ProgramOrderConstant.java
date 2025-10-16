@@ -17,7 +17,12 @@ public class ProgramOrderConstant {
     
     public static final String DELAY_OPERATE_PROGRAM_DATA_TOPIC = "d_delay_operate_program_data_topic";
     
-    public static final Long ORDER_TABLE_COUNT = 4L;
+    /** 原始分库数量 */
+    public static final int ORIGINAL_DATABASE_COUNT = 2;
     
-    public static final Long ORDER_DATABASE_COUNT = 2L;
+    /** 原始分表数量 */
+    public static final int ORIGINAL_TABLE_COUNT = 4;
+    
+    /** 虚拟分片总数（固定） */
+    public static final int VIRTUAL_SHARD_COUNT = 1024;
 }

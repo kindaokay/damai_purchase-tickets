@@ -110,6 +110,11 @@
             <groupId>org.springframework.cloud</groupId>
             <artifactId>spring-cloud-starter-loadbalancer</artifactId>
         </dependency>
+        <dependency>
+            <groupId>com.example</groupId>
+            <artifactId>damai-order-client</artifactId>
+            <version>${revision}</version>
+        </dependency>
     </dependencies>
     
     <build>
