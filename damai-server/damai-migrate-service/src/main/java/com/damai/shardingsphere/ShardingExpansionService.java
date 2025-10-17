@@ -5,6 +5,26 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+/**
+ * 扩容服务
+ * 
+ * ⚠️ 核心修复说明：
+ * 问题：订单号虽然融合了用户ID的基因位（后3位），但整体值不同，
+ *      导致 orderNumber % 128 和 userId % 128 结果不同。
+ *      如果按订单号的虚拟分片ID范围拆分，会导致同一用户的订单分散到不同表。
+ * 
+ * 解决：迁移策略改为基于用户ID的虚拟分片ID判断，保证同一用户的所有订单在同一张表。
+ * 
+ * 示例：
+ * 用户ID:   logicalShardId = 258 (offset=2, 在前64个)
+ * 订单号1:  logicalShardId = 266 (offset=10, 在前64个) ✅ 同表
+ * 订单号2:  logicalShardId = 330 (offset=74, 在后64个) ✅ 如果按订单号判断会被拆分，但现在基于用户ID，不会拆分
+ * 
+ * 扩容后：
+ * - 用户ID (258) → 保留在原表
+ * - 订单号1 (266) → 保留在原表 ✅
+ * - 订单号2 (330) → 保留在原表 ✅（路由映射已更新）
+ */
 @Slf4j
 @Service
 public class ShardingExpansionService {
@@ -15,9 +35,12 @@ public class ShardingExpansionService {
     /**
      * 执行完整的扩容流程
      * 场景：从2库×4表 扩展 到2库×8表
+     * 
+     * 迁移策略：基于用户ID的虚拟分片ID范围拆分
      */
     public void executeExpansion() {
         log.info("开始执行扩容流程：2库×4表 → 2库×8表 包含：订单表");
+        log.info("⚠️ 迁移策略：基于用户ID维度，保证同一用户的所有订单在同一张表");
         
         // 第1步：创建新表（手动执行SQL）
         
