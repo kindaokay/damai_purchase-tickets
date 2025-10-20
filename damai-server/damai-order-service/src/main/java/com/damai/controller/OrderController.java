@@ -9,13 +9,14 @@ import com.damai.dto.OrderGetDto;
 import com.damai.dto.OrderListDto;
 import com.damai.dto.OrderPayCheckDto;
 import com.damai.dto.OrderPayDto;
+import com.damai.dto.OrderSimpleListDto;
 import com.damai.dto.ProgramGetDto;
 import com.damai.properties.ApiVerify;
 import com.damai.scheduletask.PresentationOrderDataTask;
 import com.damai.scheduletask.ReconciliationTask;
 import com.damai.service.OrderService;
 import com.damai.service.OrderTaskService;
-import com.damai.shardingsphere.VirtualShardingRouteManager;
+import com.damai.shardingsphere.algorithm.VirtualShardingRouteManager;
 import com.damai.vo.AccountOrderCountVo;
 import com.damai.vo.OrderGetVo;
 import com.damai.vo.OrderListVo;
@@ -134,6 +135,12 @@ public class OrderController {
     public ApiResponse<Void> reloadRouteMappingCache() {
         virtualShardingRouteManager.reloadRouteMappingCache();
         return ApiResponse.ok();
+    }
+    
+    @Operation(summary  = "通过订单编号或者用户id查询订单列表")
+    @PostMapping(value = "/simple/list")
+    public ApiResponse<List<OrderListVo>> simpleList(@Valid @RequestBody OrderSimpleListDto orderSimpleListDto) {
+        return ApiResponse.ok(orderService.simpleList(orderSimpleListDto));
     }
     
     @Operation(summary  = "测试")

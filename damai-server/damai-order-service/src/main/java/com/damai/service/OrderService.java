@@ -23,15 +23,14 @@ import com.damai.dto.AccountOrderCountDto;
 import com.damai.dto.NotifyDto;
 import com.damai.dto.OrderCancelDto;
 import com.damai.dto.OrderCreateDto;
-import com.damai.dto.OrderCreateTestDto;
 import com.damai.dto.OrderGetDto;
 import com.damai.dto.OrderListDto;
 import com.damai.dto.OrderPayCheckDto;
 import com.damai.dto.OrderPayDto;
+import com.damai.dto.OrderSimpleListDto;
 import com.damai.dto.OrderTicketUserCreateDto;
 import com.damai.dto.PayDto;
 import com.damai.dto.ProgramOperateDataDto;
-import com.damai.dto.ProgramRecordTaskAddDto;
 import com.damai.dto.ReduceRemainNumberDto;
 import com.damai.dto.RefundDto;
 import com.damai.dto.TicketCategoryCountDto;
@@ -782,5 +781,22 @@ public class OrderService extends ServiceImpl<OrderMapper, Order> {
         orderTicketUserMapper.relDelOrderTicketUser();
         orderTicketUserRecordMapper.relDelOrderTicketUserRecord();
         orderProgramMapper.relDelOrderProgram();
+    }
+    
+    public List<OrderListVo> simpleList(OrderSimpleListDto orderSimpleListDto) {
+        if (Objects.isNull(orderSimpleListDto.getOrderNumber()) && Objects.isNull(orderSimpleListDto.getUserId())) {
+            throw new DaMaiFrameException(BaseCode.USER_ID_AND_ORDER_NUMBER_NOT_EXIST);
+        }
+        List<OrderListVo> orderListVos = new ArrayList<>();
+        LambdaQueryWrapper<Order> orderLambdaQueryWrapper =
+                Wrappers.lambdaQuery(Order.class)
+                        .eq(Objects.nonNull(orderSimpleListDto.getOrderNumber()),Order::getOrderNumber, orderSimpleListDto.getOrderNumber())
+                        .eq(Objects.nonNull(orderSimpleListDto.getUserId()),Order::getUserId, orderSimpleListDto.getUserId())
+                        .orderByDesc(Order::getCreateOrderTime);
+        List<Order> orderList = orderMapper.selectList(orderLambdaQueryWrapper);
+        if (CollectionUtil.isEmpty(orderList)) {
+            return orderListVos;
+        }
+        return BeanUtil.copyToList(orderList, OrderListVo.class);
     }
 }

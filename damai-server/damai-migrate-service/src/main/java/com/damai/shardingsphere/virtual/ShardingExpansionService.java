@@ -1,4 +1,4 @@
-package com.damai.shardingsphere;
+package com.damai.shardingsphere.virtual;
 
 import com.damai.exception.DaMaiFrameException;
 import lombok.extern.slf4j.Slf4j;

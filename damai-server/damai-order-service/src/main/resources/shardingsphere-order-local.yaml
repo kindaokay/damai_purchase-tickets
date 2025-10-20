@@ -36,13 +36,11 @@ rules:
         databaseStrategy:
           complex:
             shardingColumns: order_number,user_id
-            # 新的分库算法
-            shardingAlgorithmName: databaseOrderVirtualShardingAlgorithm
+            shardingAlgorithmName: databaseOrderComplexGeneArithmetic
         tableStrategy:
           complex:
             shardingColumns: order_number,user_id
-            # 新的分表算法
-            shardingAlgorithmName: tableOrderVirtualShardingAlgorithm
+            shardingAlgorithmName: tableOrderComplexGeneArithmetic
       d_order_ticket_user:
         actualDataNodes: ds_${0..1}.d_order_ticket_user_${0..3}
         databaseStrategy:
@@ -75,24 +73,20 @@ rules:
             shardingAlgorithmName: tableOrderProgramModModel
     bindingTables:
       - d_order,d_order_ticket_user
-    broadcastTables:
-      - d_sharding_route_mapping
     shardingAlgorithms:
-      # 新的分库算法
-      databaseOrderVirtualShardingAlgorithm:
+      databaseOrderComplexGeneArithmetic:
         type: CLASS_BASED
         props:
           sharding-count: 2
           table-sharding-count: 4
           strategy: complex
-          algorithmClassName: com.damai.shardingsphere.algorithm.DatabaseOrderVirtualShardingAlgorithm
-      # 新的分表算法
-      tableOrderVirtualShardingAlgorithm:
+          algorithmClassName: com.damai.shardingsphere.DatabaseOrderComplexGeneArithmetic
+      tableOrderComplexGeneArithmetic:
         type: CLASS_BASED
         props:
           sharding-count: 4
           strategy: complex
-          algorithmClassName: com.damai.shardingsphere.algorithm.TableOrderVirtualShardingAlgorithm
+          algorithmClassName: com.damai.shardingsphere.TableOrderComplexGeneArithmetic
       databaseOrderTicketUserComplexGeneArithmetic:
         type: CLASS_BASED
         props:
@@ -128,4 +122,4 @@ rules:
         props:
           sharding-count: 2
 props:
-  sql-show: false
+  sql-show: true

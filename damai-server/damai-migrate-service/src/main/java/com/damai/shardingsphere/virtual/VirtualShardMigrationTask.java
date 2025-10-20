@@ -1,4 +1,4 @@
-package com.damai.shardingsphere;
+package com.damai.shardingsphere.virtual;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.damai.client.OrderClient;

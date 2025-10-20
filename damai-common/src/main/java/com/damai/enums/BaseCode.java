@@ -248,6 +248,8 @@ public enum BaseCode {
     
     REFUND_AMOUNT_GREATER_THAN_PAY_AMOUNT(60024,"退款金额大于支付金额"),
     
+    USER_ID_AND_ORDER_NUMBER_NOT_EXIST(60025,"用户id和订单编号不能同时不存在"),
+    
     ORDER_NUMBER_NOT_EXIST(70000,"order_number的值不存在"),
     
     USER_ID_NOT_EXIST(70001,"user_id的值不存在"),
