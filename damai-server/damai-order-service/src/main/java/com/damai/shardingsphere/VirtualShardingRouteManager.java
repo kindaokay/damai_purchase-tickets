@@ -1,4 +1,4 @@
-package com.damai.shardingsphere.algorithm;
+package com.damai.shardingsphere;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.damai.entity.ShardingRouteMapping;

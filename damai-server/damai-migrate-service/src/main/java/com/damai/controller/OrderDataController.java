@@ -1,8 +1,6 @@
 package com.damai.controller;
 
 import com.damai.common.ApiResponse;
-import com.damai.shardingsphere.powersoftwo.PowerOf2ScaleOutService;
-import com.damai.shardingsphere.powersoftwo.ScaleOutValidationService;
 import com.damai.shardingsphere.virtual.ShardingExpansionService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -21,35 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class OrderDataController {
     
     @Autowired
-    private PowerOf2ScaleOutService powerOf2ScaleOutService;
-    
-    @Autowired
-    private ScaleOutValidationService scaleOutValidationService;
-    
-    @Autowired
     private ShardingExpansionService expansionService;
-    
-    @Operation(summary  = "执行幂次方方式的扩容")
-    @RequestMapping("/power/of/2/expand")
-    public ApiResponse<Void> powerOf2Expand() {
-        try {
-            powerOf2ScaleOutService.executeScaleOut();
-            return ApiResponse.ok();
-        } catch (Exception e) {
-            return ApiResponse.error(e.getMessage());
-        }
-    }
-    
-    @Operation(summary  = "验证幂次方方式的扩容")
-    @RequestMapping("/power/of/2/verify")
-    public ApiResponse<Void> powerOf2Verify() {
-        try {
-            scaleOutValidationService.validateDataDistribution();
-            return ApiResponse.ok();
-        } catch (Exception e) {
-            return ApiResponse.error(e.getMessage());
-        }
-    }
     
     @Operation(summary  = "执行虚拟分片方式的扩容")
     @RequestMapping("/virtual/expand")

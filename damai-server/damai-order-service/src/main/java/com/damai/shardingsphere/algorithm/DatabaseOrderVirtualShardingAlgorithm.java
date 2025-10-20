@@ -4,7 +4,8 @@ import cn.hutool.core.collection.CollectionUtil;
 import com.damai.core.SpringUtil;
 import com.damai.enums.BaseCode;
 import com.damai.exception.DaMaiFrameException;
-import com.damai.shardingsphere.algorithm.VirtualShardingRouteManager.PhysicalShard;
+import com.damai.shardingsphere.VirtualShardingRouteManager;
+import com.damai.shardingsphere.VirtualShardingRouteManager.PhysicalShard;
 import org.apache.shardingsphere.sharding.api.sharding.complex.ComplexKeysShardingAlgorithm;
 import org.apache.shardingsphere.sharding.api.sharding.complex.ComplexKeysShardingValue;
 
