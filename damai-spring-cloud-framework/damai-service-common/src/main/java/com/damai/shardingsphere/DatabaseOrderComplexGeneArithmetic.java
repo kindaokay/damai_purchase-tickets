@@ -43,6 +43,10 @@ public class DatabaseOrderComplexGeneArithmetic implements ComplexKeysShardingAl
         this.shardingCount = Integer.parseInt(props.getProperty(SHARDING_COUNT_KEY_NAME));
         this.tableShardingCount = Integer.parseInt(props.getProperty(TABLE_SHARDING_COUNT_KEY_NAME));
     }
+    
+    /**
+     * 此版本进行了优化，使得分库分表的数据更加均匀和高效，如果要看未优化版本，请查看大麦普通开源版本的DatabaseOrderComplexArithmetic类
+     * */
     @Override
     public Collection<String> doSharding(Collection<String> allActualSplitDatabaseNames, 
                                          ComplexKeysShardingValue<Long> complexKeysShardingValue) {
