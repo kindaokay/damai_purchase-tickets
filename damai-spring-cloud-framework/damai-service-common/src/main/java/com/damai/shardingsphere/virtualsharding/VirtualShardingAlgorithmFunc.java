@@ -4,6 +4,11 @@ import static com.damai.constant.ProgramOrderConstant.ORIGINAL_DATABASE_COUNT;
 import static com.damai.constant.ProgramOrderConstant.ORIGINAL_TABLE_COUNT;
 import static com.damai.constant.ProgramOrderConstant.VIRTUAL_SHARD_COUNT;
 
+/**
+ * @program: 极度真实还原大麦网高并发实战项目。 添加 阿星不是程序员 微信，添加时备注 大麦 来获取项目的完整资料 
+ * @description: 计算虚拟分片ID
+ * @author: 阿星不是程序员
+ **/
 public class VirtualShardingAlgorithmFunc {
     
     /**
@@ -72,24 +77,4 @@ public class VirtualShardingAlgorithmFunc {
         return (long)(Math.log(count) / Math.log(2));
     }
     
-    /**
-     * 物理分片信息
-     */
-    public record PhysicalShard(String database, int tableSuffix) {
-        /**
-         * 获取数据源名称
-         */
-        public String getDatasourceName() {
-            return database;
-        }
-        
-        /**
-         * 根据表前缀生成完整表名
-         * @param tablePrefix 表前缀（如 d_order）
-         * @return 完整表名（如 d_order_0）
-         */
-        public String getFullTableName(String tablePrefix) {
-            return tablePrefix + "_" + tableSuffix;
-        }
-    }
 }

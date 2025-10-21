@@ -14,7 +14,7 @@ import java.util.Objects;
 import java.util.Properties;
 /**
  * @program: 极度真实还原大麦网高并发实战项目。 添加 阿星不是程序员 微信，添加时备注 大麦 来获取项目的完整资料 
- * @description: 订单分库
+ * @description: 订单分库，pro版本优化了分片算法，基于基因位计算分库，更加均匀和高效
  * @author: 阿星不是程序员
  **/
 public class DatabaseOrderComplexGeneArithmetic implements ComplexKeysShardingAlgorithm<Long> {

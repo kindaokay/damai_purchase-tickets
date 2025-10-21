@@ -17,9 +17,10 @@ import java.util.Objects;
 import java.util.Properties;
 
 /**
- * 基于虚拟分片的分库算法
- * 适用于所有按order_number、user_id分片的表
- */
+ * @program: 极度真实还原大麦网高并发实战项目。 添加 阿星不是程序员 微信，添加时备注 大麦 来获取项目的完整资料 
+ * @description: 基于虚拟分片的分库算法，适用于所有按order_number、user_id分片的表
+ * @author: 阿星不是程序员
+ **/
 public class DatabaseOrderVirtualShardingAlgorithm implements ComplexKeysShardingAlgorithm<Long> {
     
     @Override
