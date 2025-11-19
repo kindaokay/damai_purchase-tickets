@@ -1,6 +1,5 @@
 package com.damai.domain;
 
-import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -11,7 +10,6 @@ import lombok.NoArgsConstructor;
  **/
 @Data
 @NoArgsConstructor
-@AllArgsConstructor
 public class DiscardOrder {
     /**
      * 参数信息
@@ -22,4 +20,20 @@ public class DiscardOrder {
      * 原因
      * */
     private Integer discardOrderReason;
+    
+    /**
+     * 错误信息
+     * */
+    private String errorMsg;
+    
+    public DiscardOrder(OrderCreateMq orderCreateMq, Integer discardOrderReason) {
+        this.orderCreateMq = orderCreateMq;
+        this.discardOrderReason = discardOrderReason;
+    }
+    
+    public DiscardOrder(OrderCreateMq orderCreateMq, Integer discardOrderReason, String errorMsg) {
+        this.orderCreateMq = orderCreateMq;
+        this.discardOrderReason = discardOrderReason;
+        this.errorMsg = errorMsg;
+    }
 }

@@ -9,17 +9,18 @@ import com.damai.enums.DiscardOrderReason;
 import com.damai.redis.RedisCache;
 import com.damai.redis.RedisKeyBuild;
 import com.damai.service.OrderService;
+import com.damai.util.StringUtil;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
+import io.micrometer.core.instrument.MeterRegistry;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 import static com.damai.constant.Constant.SPRING_INJECT_PREFIX_DISTINCTION_NAME;
@@ -40,43 +41,52 @@ public class CreateOrderConsumer {
     @Autowired
     private RedisCache redisCache;
     
+    @Autowired
+    private MeterRegistry meterRegistry;
+    
     public static Long MESSAGE_DELAY_TIME = 5000L;
     
     @KafkaListener(topics = {SPRING_INJECT_PREFIX_DISTINCTION_NAME+"-"+"${spring.kafka.topic:create_order}"})
     public void consumerOrderMessage(ConsumerRecord<String,String> consumerRecord){
+        String value = consumerRecord.value();
+        if (StringUtil.isEmpty(value)) {
+            return;
+        }
+        OrderCreateMq orderCreateMq = JSON.parseObject(value, OrderCreateMq.class);
         try {
-            Optional.ofNullable(consumerRecord.value()).map(String::valueOf).ifPresent(value -> {
-      
-                OrderCreateMq orderCreateMq = JSON.parseObject(value, OrderCreateMq.class);
-                
-                long createOrderTimeTimestamp = orderCreateMq.getCreateOrderTime().getTime();
-                
-                long currentTimeTimestamp = System.currentTimeMillis();
-                
-                long delayTime = currentTimeTimestamp - createOrderTimeTimestamp;
-                
-                log.info("消费到kafka的创建订单消息 消息体: {} 延迟时间 : {} 毫秒",value,delayTime);
-                
-       
-                if (currentTimeTimestamp - createOrderTimeTimestamp > MESSAGE_DELAY_TIME) {
-                    Map<Long, List<OrderTicketUserCreateDto>> orderTicketUserSeatList =
-                            orderCreateMq.getOrderTicketUserCreateDtoList().stream().collect(Collectors.groupingBy(OrderTicketUserCreateDto::getTicketCategoryId));
-                    //key: 节目票档id value: 座位id集合
-                    Map<Long,List<Long>> seatMap = new HashMap<>(orderTicketUserSeatList.size());
-                    orderTicketUserSeatList.forEach((k,v) -> {
-                        seatMap.put(k,v.stream().map(OrderTicketUserCreateDto::getSeatId).collect(Collectors.toList()));
-                    });
-                    log.info("消费到kafka的创建订单消息延迟时间大于了 {} 毫秒 此订单消息被丢弃 订单号 : {} 座位信息 : {}",
-                            delayTime,orderCreateMq.getOrderNumber(),JSON.toJSONString(seatMap));
-                    //将延迟丢弃的订单放入redis中
-                    redisCache.leftPushForList(RedisKeyBuild.createRedisKey(RedisKeyManage.DISCARD_ORDER,
-                            orderCreateMq.getProgramId()),new DiscardOrder(orderCreateMq, DiscardOrderReason.CONSUMER_DELAY.getCode()));
-                }else {
-                    String orderNumber = orderService.createMq(orderCreateMq);
-                    log.info("消费到kafka的创建订单消息 创建订单成功 订单号 : {}",orderNumber);
-                }
-            });
+            long createOrderTimeTimestamp = orderCreateMq.getCreateOrderTime().getTime();
+            
+            long currentTimeTimestamp = System.currentTimeMillis();
+            
+            long delayTime = currentTimeTimestamp - createOrderTimeTimestamp;
+            
+            log.info("消费到kafka的创建订单消息 消息体: {} 延迟时间 : {} 毫秒",value,delayTime);
+            
+            if (currentTimeTimestamp - createOrderTimeTimestamp > MESSAGE_DELAY_TIME) {
+                Map<Long, List<OrderTicketUserCreateDto>> orderTicketUserSeatList =
+                        orderCreateMq.getOrderTicketUserCreateDtoList().stream().collect(Collectors.groupingBy(OrderTicketUserCreateDto::getTicketCategoryId));
+                //key: 节目票档id value: 座位id集合
+                Map<Long,List<Long>> seatMap = new HashMap<>(orderTicketUserSeatList.size());
+                orderTicketUserSeatList.forEach((k,v) -> {
+                    seatMap.put(k,v.stream().map(OrderTicketUserCreateDto::getSeatId).collect(Collectors.toList()));
+                });
+                log.info("消费到kafka的创建订单消息延迟时间大于了 {} 毫秒 此订单消息被丢弃 订单号 : {} 座位信息 : {}",
+                        delayTime,orderCreateMq.getOrderNumber(),JSON.toJSONString(seatMap));
+                //将延迟丢弃的订单放入redis中
+                redisCache.leftPushForList(RedisKeyBuild.createRedisKey(RedisKeyManage.DISCARD_ORDER,
+                        orderCreateMq.getProgramId()),new DiscardOrder(orderCreateMq, DiscardOrderReason.CONSUMER_DELAY.getCode(), "消费延迟"));
+                //上报指标给Promethus
+                meterRegistry.counter("damai_order_create_fail_total", "reason", "CREATE_ORDER_DELAY", "programId", String.valueOf(orderCreateMq.getProgramId())).increment();
+            }else {
+                String orderNumber = orderService.createMq(orderCreateMq);
+                log.info("消费到kafka的创建订单消息 创建订单成功 订单号 : {}",orderNumber);
+            }
         }catch (Exception e) {
+            //将创建失败的订单放入redis中
+            redisCache.leftPushForList(RedisKeyBuild.createRedisKey(RedisKeyManage.DISCARD_ORDER,
+                    orderCreateMq.getProgramId()),new DiscardOrder(orderCreateMq, DiscardOrderReason.CREATE_ORDER_FAIL.getCode(), e.getMessage()));
+            //上报指标给Promethus
+            meterRegistry.counter("damai_order_create_fail_total", "reason", "CREATE_ORDER_FAIL", "programId", String.valueOf(orderCreateMq.getProgramId())).increment();
             log.error("处理消费到kafka的创建订单消息失败 error",e);
         }
     }

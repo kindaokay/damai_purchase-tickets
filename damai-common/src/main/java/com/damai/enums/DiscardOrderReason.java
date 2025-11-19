@@ -12,6 +12,8 @@ public enum DiscardOrderReason {
     CONSUMER_DELAY(1,"mq消费消息延时"),
     
     MODIFY_PROGRAM_REMAIN_NUMBER_SEAT_FAIL(2,"修改节目服务的余票和座位失败"),
+    
+    CREATE_ORDER_FAIL(3,"创建订单失败"),
     ;
 
     private Integer code;
