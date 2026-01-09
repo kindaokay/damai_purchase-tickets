@@ -27,7 +27,7 @@ public class DefaultExceptionHandler {
     * */
     @ExceptionHandler(value = DaMaiFrameException.class)
     public ApiResponse<String> toolkitExceptionHandler(HttpServletRequest request, DaMaiFrameException daMaiFrameException) {
-        log.error("业务异常 method : {} url : {} query : {} ", request.getMethod(), getRequestUrl(request), getRequestQuery(request), daMaiFrameException);
+        log.error("业务异常 错误信息 : {} method : {} url : {} query : {} ", daMaiFrameException.getMessage(), request.getMethod(), getRequestUrl(request), getRequestQuery(request), daMaiFrameException);
         return ApiResponse.error(daMaiFrameException.getCode(), daMaiFrameException.getMessage());
     }
     /**
@@ -36,7 +36,7 @@ public class DefaultExceptionHandler {
     @SneakyThrows
     @ExceptionHandler(value = MethodArgumentNotValidException.class)
     public ApiResponse<List<ArgumentError>> validExceptionHandler(HttpServletRequest request, MethodArgumentNotValidException ex) {
-        log.error("参数验证异常 method : {} url : {} query : {} ", request.getMethod(), getRequestUrl(request), getRequestQuery(request), ex);
+        log.error("参数验证异常 错误信息 : {} method : {} url : {} query : {} ", ex.getMessage(), request.getMethod(), getRequestUrl(request), getRequestQuery(request), ex);
         BindingResult bindingResult = ex.getBindingResult();
         List<ArgumentError> argumentErrorList = 
                 bindingResult.getFieldErrors()
@@ -55,7 +55,7 @@ public class DefaultExceptionHandler {
      */
     @ExceptionHandler(value = Throwable.class)
     public ApiResponse<String> defaultErrorHandler(HttpServletRequest request, Throwable throwable) {
-        log.error("全局异常 method : {} url : {} query : {} ", request.getMethod(), getRequestUrl(request), getRequestQuery(request), throwable);
+        log.error("全局异常 错误信息 : {} method : {} url : {} query : {} ", throwable.getMessage(), request.getMethod(), getRequestUrl(request), getRequestQuery(request), throwable);
         return ApiResponse.error();
     }
 
