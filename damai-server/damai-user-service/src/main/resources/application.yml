@@ -98,7 +98,7 @@ feign:
 management:
   metrics:
     tags:
-      application: ${spring.application.name}
+      application: user-service
   endpoint:
     health:
       show-details: always
