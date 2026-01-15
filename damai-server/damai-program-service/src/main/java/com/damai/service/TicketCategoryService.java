@@ -12,7 +12,11 @@ import com.damai.dto.TicketCategoryAddDto;
 import com.damai.dto.TicketCategoryDto;
 import com.damai.dto.TicketCategoryListByProgramDto;
 import com.damai.dto.TicketCategoryListDto;
+import com.damai.entity.Program;
 import com.damai.entity.TicketCategory;
+import com.damai.enums.BaseCode;
+import com.damai.exception.DaMaiFrameException;
+import com.damai.mapper.ProgramMapper;
 import com.damai.mapper.TicketCategoryMapper;
 import com.damai.redis.RedisCache;
 import com.damai.redis.RedisKeyBuild;
@@ -32,6 +36,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -64,8 +69,15 @@ public class TicketCategoryService extends ServiceImpl<TicketCategoryMapper, Tic
     @Autowired
     private LocalCacheTicketCategory localCacheTicketCategory;
     
+    @Autowired
+    private ProgramMapper programMapper;
+    
     @Transactional(rollbackFor = Exception.class)
     public Long add(TicketCategoryAddDto ticketCategoryAddDto) {
+        Program program = programMapper.selectById(ticketCategoryAddDto.getProgramId());
+        if (Objects.isNull(program)) {
+            throw new DaMaiFrameException(BaseCode.PROGRAM_NOT_EXIST);
+        }
         TicketCategory ticketCategory = new TicketCategory();
         BeanUtil.copyProperties(ticketCategoryAddDto,ticketCategory);
         ticketCategory.setId(uidGenerator.getUid());

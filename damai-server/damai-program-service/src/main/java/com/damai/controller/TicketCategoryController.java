@@ -44,13 +44,13 @@ public class TicketCategoryController {
         return ApiResponse.ok(ticketCategoryService.detail(ticketCategoryDto));
     }
 
-    @Operation(summary  = "查询集合")
+    @Operation(summary  = "查询集合(programId和票档id集合查询)")
     @PostMapping(value = "/select/list")
     public ApiResponse<List<TicketCategoryDetailVo>> selectList(@Valid @RequestBody TicketCategoryListDto ticketCategoryDto) {
         return ApiResponse.ok(ticketCategoryService.selectList(ticketCategoryDto));
     }
 
-    @Operation(summary  = "查询集合")
+    @Operation(summary  = "查询集合(programId查询)")
     @PostMapping(value = "/select/list/by/program")
     public ApiResponse<List<TicketCategoryDetailVo>> selectListByProgram(@Valid @RequestBody TicketCategoryListByProgramDto ticketCategoryListByProgramDto) {
         return ApiResponse.ok(ticketCategoryService.selectListByProgram(ticketCategoryListByProgramDto));
