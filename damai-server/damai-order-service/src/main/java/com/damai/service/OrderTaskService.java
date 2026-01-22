@@ -6,17 +6,11 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.damai.client.ProgramClient;
 import com.damai.common.ApiResponse;
 import com.damai.core.RedisKeyManage;
-import com.damai.domain.ExaminationIdentifierResult;
-import com.damai.domain.ExaminationRecordTypeResult;
-import com.damai.domain.ExaminationSeatResult;
-import com.damai.domain.ExaminationSimpleResult;
-import com.damai.domain.ExaminationTotalResult;
 import com.damai.domain.ProgramRecord;
 import com.damai.domain.ReconciliationTaskData;
 import com.damai.domain.SeatRecord;
 import com.damai.domain.TicketCategoryRecord;
 import com.damai.dto.TicketCategoryListDto;
-import com.damai.entity.Order;
 import com.damai.entity.OrderProgram;
 import com.damai.entity.OrderTicketUserRecord;
 import com.damai.enums.BaseCode;
@@ -25,16 +19,13 @@ import com.damai.enums.ReconciliationStatus;
 import com.damai.enums.RecordType;
 import com.damai.enums.SellStatus;
 import com.damai.exception.DaMaiFrameException;
-import com.damai.mapper.OrderMapper;
 import com.damai.mapper.OrderProgramMapper;
-import com.damai.mapper.OrderTicketUserMapper;
 import com.damai.mapper.OrderTicketUserRecordMapper;
 import com.damai.redis.RedisCache;
 import com.damai.redis.RedisKeyBuild;
 import com.damai.service.handler.ProgramRecordHandler;
 import com.damai.service.handler.SeatHandler;
 import com.damai.service.handler.TicketRemainNumberHandler;
-import com.damai.util.SplitUtil;
 import com.damai.vo.TicketCategoryDetailVo;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -44,7 +35,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -64,12 +54,6 @@ public class OrderTaskService {
     
     @Autowired
     private RedisCache redisCache;
-    
-    @Autowired
-    private OrderMapper orderMapper;
-    
-    @Autowired
-    private OrderTicketUserMapper orderTicketUserMapper;
     
     @Autowired
     private OrderTicketUserRecordMapper orderTicketUserRecordMapper;
@@ -92,435 +76,377 @@ public class OrderTaskService {
     @Autowired
     private OrderProgramMapper orderProgramMapper;
     
+    // ==================== 对账任务入口 ====================
+    
     /**
-     * 对账查询，得到的redis为主和数据库为主的对比结果还并没有优化合并
+     * 执行对账任务（以数据库为准）
+     * 
+     * 核心逻辑：
+     * 1. 查询Redis中的节目记录（hash类型，key: damai-d_mai_program_record_{programId}）
+     * 2. 查询数据库中未对账的购票人订单记录
+     * 3. 对比找出数据库有但Redis没有的座位记录
+     * 4. 将缺失的记录补偿到Redis
+     * 5. 更新数据库对账状态、转移Redis记录到PROGRAM_RECORD_FINISH
+     * 
+     * 说明：
+     * - 只处理“数据库有、Redis没有”的情况
+     * - “Redis有、数据库没有”的情况由DISCARD_ORDER机制处理（消费延迟/创建失败）
      * 
      * @param programId 节目id
-     * @param programRecordMap redis中的节目记录
+     * @return 对账任务结果，包含已补偿到Redis的记录；无待对账记录时返回null
      */
-    public ExaminationTotalResult reconciliationQuery(Long programId, Map<String, String> programRecordMap) {
-        //以redis为标准的对账
-        List<ExaminationIdentifierResult> examinationIdentifierResultRedisStandardList = reconciliationRedisStandard(programId, programRecordMap);
-        //以数据库为标准的对账
-        List<ExaminationIdentifierResult> examinationIdentifierResultDbStandardList = reconciliationDbStandard(programId, programRecordMap);
-        return new ExaminationTotalResult(programId, examinationIdentifierResultRedisStandardList, examinationIdentifierResultDbStandardList);
-    }
-    /**
-     * @param programId 节目id
-     * @param programRecordMap redis中的节目记录
-     * */
-    public List<ExaminationIdentifierResult> reconciliationRedisStandard(Long programId, Map<String, String> programRecordMap) {
-        //redis和数据对账结果(节目维度)
-        List<ExaminationIdentifierResult> examinationIdentifierResultList = new ArrayList<>();
-        //以redis记录为基准的话，redis记录不存在就直接返回
-        if (CollectionUtil.isEmpty(programRecordMap)) {
-            return examinationIdentifierResultList;
-        }
-        //key：记录标识_用户id  value：记录类型的集合
-        Map<String, List<String>> identifierIdAndUserIdMap = regroup(programRecordMap);
-        for (Map.Entry<String, List<String>> identifierIdAndUserIdEntry : identifierIdAndUserIdMap.entrySet()) {
-            String[] split = SplitUtil.toSplit(identifierIdAndUserIdEntry.getKey());
-            if (split.length != 2) {
-                continue;
-            }
-            //标识和订单关联
-            String identifierId = split[0];
-            //用户id
-            String userId = split[1];
-            //redis中记录类型集合
-            List<String> redisRecordTypeList = identifierIdAndUserIdEntry.getValue();
-            //购票人订单记录中的座位 key:记录类型 value：此记录类型下的购票人订单记录集合
-            Map<Integer, List<OrderTicketUserRecord>> orderTicketUserRecordMap = new HashMap<>(64);
-            //查询订单
-            Order order = orderMapper.selectOne(Wrappers.lambdaQuery(Order.class)
-                    .eq(Order::getReconciliationStatus, ReconciliationStatus.RECONCILIATION_NO.getCode())
-                    .eq(Order::getProgramId, programId).eq(Order::getUserId, Long.parseLong(userId))
-                    .eq(Order::getIdentifierId, Long.parseLong(identifierId)));
-            if (Objects.nonNull(order)) {
-                //根据订单编号查询购票人订单记录
-                List<OrderTicketUserRecord> orderTicketUserRecordList = 
-                        orderTicketUserRecordService.list(Wrappers.lambdaQuery(OrderTicketUserRecord.class)
-                                .eq(OrderTicketUserRecord::getOrderNumber, order.getOrderNumber()));
-                if (CollectionUtil.isNotEmpty(orderTicketUserRecordList)) {
-                    //购票人订单记录中的座位
-                    orderTicketUserRecordMap = orderTicketUserRecordList.stream()
-                            .collect(Collectors.groupingBy(OrderTicketUserRecord::getRecordTypeCode));
-                }
-            }
-            List<ExaminationRecordTypeResult> examinationRecordTypeResultList = new ArrayList<>();
-            for (String redisRecordType : redisRecordTypeList) {
-                //根据记录类型获取对应的购票人订单记录中的座位
-                List<OrderTicketUserRecord> dbOrderTicketUserRecordList = orderTicketUserRecordMap.get(RecordType.getCodeByValue(redisRecordType));
-                ExaminationRecordTypeResult examinationRecordTypeResult = 
-                        executeRedisAndDbExamination(programRecordMap, dbOrderTicketUserRecordList, redisRecordType, identifierId, userId);
-                examinationRecordTypeResultList.add(examinationRecordTypeResult);
-            }
-            //redis和数据对账结果(记录标识维度)
-            ExaminationIdentifierResult examinationIdentifierResult = 
-                    new ExaminationIdentifierResult(identifierId, userId, examinationRecordTypeResultList);
-            examinationIdentifierResultList.add(examinationIdentifierResult);
-        }
-        return examinationIdentifierResultList;
-    }
-    /**
-     * @param programId 节目id
-     * @param programRecordMap redis中的节目记录
-     * */
-    public List<ExaminationIdentifierResult> reconciliationDbStandard(Long programId, Map<String, String> programRecordMap) {
-        //redis和数据对账结果(节目维度)
-        List<ExaminationIdentifierResult> examinationIdentifierResultList = new ArrayList<>();
-        //查询订单节目
-        List<OrderProgram> orderProgramList = 
-                orderProgramMapper.selectList(Wrappers.lambdaQuery(OrderProgram.class)
+    public ReconciliationTaskData reconciliationTask(Long programId) {
+        // 步骤1: 查询Redis中的节目记录
+        // key格式: recordType_identifierId_userId
+        // value格式: ProgramRecord的JSON字符串
+        Map<String, String> redisRecordMap = redisCache.getAllMapForHash(
+                RedisKeyBuild.createRedisKey(RedisKeyManage.PROGRAM_RECORD, programId), String.class);
+        
+        // 步骤2: 查询数据库未处理的订单
+        List<OrderProgram> orderPrograms = orderProgramMapper.selectList(
+                Wrappers.lambdaQuery(OrderProgram.class)
                         .eq(OrderProgram::getHandleStatus, HandleStatus.NO_HANDLE.getCode())
                         .eq(OrderProgram::getProgramId, programId));
-        if (CollectionUtil.isEmpty(orderProgramList)) {
-            return examinationIdentifierResultList;
+        if (CollectionUtil.isEmpty(orderPrograms)) {
+            // 没有待对账的订单
+            return null;
         }
-        //购票人订单记录中的座位
-        List<OrderTicketUserRecord> orderTicketUserRecordList = 
-                orderTicketUserRecordMapper.selectList(Wrappers.lambdaQuery(OrderTicketUserRecord.class)
-                        .in(OrderTicketUserRecord::getOrderNumber, orderProgramList.stream().map(OrderProgram::getOrderNumber)
-                                .collect(Collectors.toList())).eq(OrderTicketUserRecord::getReconciliationStatus, ReconciliationStatus.RECONCILIATION_NO.getCode()));
-        //key：记录类型_记录标识_用户id  value：购票人订单记录
-        Map<String, List<OrderTicketUserRecord>> orderTicketUserRecordMap = orderTicketUserRecordList.stream().collect(Collectors.groupingBy(record -> record.getRecordTypeValue() + GLIDE_LINE + record.getIdentifierId() + GLIDE_LINE + record.getUserId()));
-        //key：记录标识_用户id  value：记录类型的集合
-        Map<String, List<String>> identifierIdAndUserIdMap = regroup(orderTicketUserRecordMap);
-        for (Map.Entry<String, List<String>> identifierIdAndUserIdEntry : identifierIdAndUserIdMap.entrySet()) {
-            String[] split = SplitUtil.toSplit(identifierIdAndUserIdEntry.getKey());
-            if (split.length != 2) {
-                continue;
-            }
-            //标识和订单关联
-            String identifierId = split[0];
-            //用户id
-            String userId = split[1];
-            //数据库中记录类型集合
-            List<String> dbRecordTypeList = identifierIdAndUserIdEntry.getValue();
-            List<ExaminationRecordTypeResult> examinationRecordTypeResultList = new ArrayList<>();
-            for (String dbRecordType : dbRecordTypeList) {
-                //根据记录类型获取对应的购票人订单记录中的座位
-                List<OrderTicketUserRecord> dbOrderTicketUserRecordList = orderTicketUserRecordMap.get(dbRecordType + GLIDE_LINE + identifierId + GLIDE_LINE + userId);
-                ExaminationRecordTypeResult examinationRecordTypeResult = executeRedisAndDbExamination(programRecordMap, dbOrderTicketUserRecordList, dbRecordType, identifierId, userId);
-                examinationRecordTypeResultList.add(examinationRecordTypeResult);
-            }
-            //redis和数据对账结果(记录标识维度)
-            ExaminationIdentifierResult examinationIdentifierResult = new ExaminationIdentifierResult(identifierId, userId, examinationRecordTypeResultList);
-            examinationIdentifierResultList.add(examinationIdentifierResult);
-        }
-        return examinationIdentifierResultList;
-    }
-    
-    public Map<String, List<String>> regroup(Map<String, ?> programRecordMap) {
-        Map<String, List<String>> resultMap = new HashMap<>(64);
-        for (String origKey : programRecordMap.keySet()) {
-            // 最多分割为 3 段：["changeStatus", "985033500750127104", "927653802827104258"]
-            String[] parts = origKey.split(GLIDE_LINE, 3);
-            if (parts.length < 3) {
-                // 不符合预期格式时跳过或自行处理
-                continue;
-            }
-            // "changeStatus" 或 "reduce" 或 "increase"
-            String action = parts[0];
-            // "985033500750127104_927653802827104258"
-            String newKey = parts[1] + "_" + parts[2];
-            // 累加到结果 Map 中
-            resultMap.computeIfAbsent(newKey, k -> new ArrayList<>()).add(action);
-        }
-        return resultMap;
-    }
-    
-    /**
-     * @param programRecordMap redis中的节目记录
-     * @param dbOrderTicketUserRecordList 购票人订单记录中的座位
-     * @param dbRecordType 记录类型
-     * @param identifierId 标识id
-     * @param userId 用户id
-     * */
-    public ExaminationRecordTypeResult executeRedisAndDbExamination(Map<String, String> programRecordMap, 
-                                                                    List<OrderTicketUserRecord> dbOrderTicketUserRecordList, 
-                                                                    String dbRecordType, String identifierId, String userId) {
-        ProgramRecord programRecord = JSON.parseObject(programRecordMap.get(dbRecordType + GLIDE_LINE + identifierId + GLIDE_LINE + userId), ProgramRecord.class);
-        //如果数据库和redis都没有这条记录的话
-        if (CollectionUtil.isEmpty(dbOrderTicketUserRecordList) && Objects.isNull(programRecord)) {
-            //redis和数据对账结果(记录类型维度)
-            return new ExaminationRecordTypeResult(RecordType.getCodeByValue(dbRecordType), dbRecordType, new ExaminationSeatResult());
-        }
-        //如果数据库没有，redis有这条记录的话
-        if (CollectionUtil.isEmpty(dbOrderTicketUserRecordList) && Objects.nonNull(programRecord)) {
-            Map<Long, SeatRecord> redisSeatRecordMap = getRedisSeatRecordMap(programRecord);
-            //redis记录中的座位和购票人订单记录中的座位对比
-            ExaminationSeatResult examinationResult = executeExaminationSeat(redisSeatRecordMap, null);
-            //redis和数据对账结果(记录类型维度)
-            return new ExaminationRecordTypeResult(RecordType.getCodeByValue(dbRecordType), dbRecordType, examinationResult);
-        }
-        //购票人订单记录中的座位转成Map，key：座位id，value：OrderTicketUserRecord
-        Map<Long, OrderTicketUserRecord> dbOrderTicketUserRecordMap = dbOrderTicketUserRecordList.stream().collect(Collectors.toMap(OrderTicketUserRecord::getSeatId, orderTicketUserRecord -> orderTicketUserRecord, (v1, v2) -> v2));
-        //如果数据库有，redis没有这条记录的话
-        if (CollectionUtil.isNotEmpty(dbOrderTicketUserRecordList) && Objects.isNull(programRecord)) {
-            //redis记录中的座位和购票人订单记录中的座位对比
-            ExaminationSeatResult examinationResult = executeExaminationSeat(null, dbOrderTicketUserRecordMap);
-            //redis和数据对账结果(记录类型维度)
-            return new ExaminationRecordTypeResult(RecordType.getCodeByValue(dbRecordType), dbRecordType, examinationResult);
-        }
-        //如果数据库和redis都有这条记录的话
-        Map<Long, SeatRecord> redisSeatRecordMap = getRedisSeatRecordMap(programRecord);
-        //redis记录中的座位和购票人订单记录中的座位对比
-        ExaminationSeatResult examinationResult = executeExaminationSeat(redisSeatRecordMap, dbOrderTicketUserRecordMap);
-        //redis和数据对账结果(记录类型维度)
-        return new ExaminationRecordTypeResult(RecordType.getCodeByValue(dbRecordType), dbRecordType, examinationResult);
-    }
-    
-    public Map<Long, SeatRecord> getRedisSeatRecordMap(ProgramRecord programRecord) {
-        List<TicketCategoryRecord> ticketCategoryRecordList = programRecord.getTicketCategoryRecordList();
-        //redis记录中的座位
-        List<SeatRecord> seatRecordList = new ArrayList<>();
-        for (TicketCategoryRecord ticketCategoryRecord : ticketCategoryRecordList) {
-            seatRecordList.addAll(ticketCategoryRecord.getSeatRecordList());
-        }
-        //redis记录中的座位转成Map，key：座位id，value：SeatRecord
-        return seatRecordList.stream().collect(Collectors.toMap(SeatRecord::getSeatId, seatRecord -> seatRecord, (v1, v2) -> v2));
-    }
-    /**
-     * @param redisSeatRecordMap redis记录中的座位转成Map，key：座位id，value：SeatRecord
-     * @param dbOrderTicketUserRecordMap 数据库中购票人订单记录中的座位转成Map，key：座位id，value：OrderTicketUserRecord
-     * */
-    public ExaminationSeatResult executeExaminationSeat(Map<Long, SeatRecord> redisSeatRecordMap, Map<Long, OrderTicketUserRecord> dbOrderTicketUserRecordMap) {
-        //以redis为准的座位记录统计数量
-        int redisStandardStatisticCount = 0;
-        //需要向数据库中补充的座位
-        List<SeatRecord> needToDbSeatRecordList = new ArrayList<>();
-        //以数据库为准的座位记录统计数量
-        int dbStandardStatisticCount = 0;
-        //需要向redis中补充的座位
-        List<OrderTicketUserRecord> needToRedisSeatRecordList = new ArrayList<>();
-        //redis没有的话，直接构建数据
-        if (CollectionUtil.isEmpty(redisSeatRecordMap)) {
-            for (Map.Entry<Long, OrderTicketUserRecord> orderTicketUserRecordEntry : dbOrderTicketUserRecordMap.entrySet()) {
-                needToRedisSeatRecordList.add(orderTicketUserRecordEntry.getValue());
-            }
-            //对比结果
-            return new ExaminationSeatResult(redisStandardStatisticCount, dbStandardStatisticCount, needToDbSeatRecordList, needToRedisSeatRecordList);
-        }
-        //数据库没有的话，直接构建数据
-        if (CollectionUtil.isEmpty(dbOrderTicketUserRecordMap)) {
-            for (Map.Entry<Long, SeatRecord> seatRecordEntry : redisSeatRecordMap.entrySet()) {
-                needToDbSeatRecordList.add(seatRecordEntry.getValue());
-            }
-            //对比结果
-            return new ExaminationSeatResult(redisStandardStatisticCount, dbStandardStatisticCount, needToDbSeatRecordList, needToRedisSeatRecordList);
-        }
-        //以redis记录为准，对比redis记录中的座位和购票人订单记录中的座位
-        for (Map.Entry<Long, SeatRecord> seatRecordEntry : redisSeatRecordMap.entrySet()) {
-            Long seatId = seatRecordEntry.getKey();
-            OrderTicketUserRecord orderTicketUserRecord = dbOrderTicketUserRecordMap.get(seatId);
-            //redis记录有座位，数据库记录没有座位
-            if (Objects.isNull(orderTicketUserRecord)) {
-                needToDbSeatRecordList.add(seatRecordEntry.getValue());
-            } else {
-                //匹配到了
-                redisStandardStatisticCount++;
-            }
-        }
-        //以数据库记录为准，对比redis记录中的座位和购票人订单记录中的座位
-        for (Map.Entry<Long, OrderTicketUserRecord> orderTicketUserRecordEntry : dbOrderTicketUserRecordMap.entrySet()) {
-            Long seatId = orderTicketUserRecordEntry.getKey();
-            SeatRecord seatRecord = redisSeatRecordMap.get(seatId);
-            //数据库记录有座位，redis记录没有座位
-            if (Objects.isNull(seatRecord)) {
-                needToRedisSeatRecordList.add(orderTicketUserRecordEntry.getValue());
-            } else {
-                //匹配到了
-                dbStandardStatisticCount++;
-            }
-        }
-        //对比结果
-        return new ExaminationSeatResult(redisStandardStatisticCount, dbStandardStatisticCount, needToDbSeatRecordList, needToRedisSeatRecordList);
-    }
-    
-    /**
-     * 获得对比的结果
-     */
-    public ExaminationSimpleResult reconciliationQuerySimple(Long programId, Map<String, String> programRecordMap) {
-        //对账结果
-        ExaminationTotalResult examinationTotalResult = reconciliationQuery(programId, programRecordMap);
-        List<ExaminationIdentifierResult> examinationIdentifierResultRedisStandardList = examinationTotalResult.getExaminationIdentifierResultRedisStandardList();
-        List<ExaminationIdentifierResult> examinationIdentifierResultDbStandardList = examinationTotalResult.getExaminationIdentifierResultDbStandardList();
-        //循环以redis为标准的结果
-        List<ExaminationIdentifierResult> simpleExaminationIdentifierResultRedisStandardList = simpleExaminationIdentifierResultList(examinationIdentifierResultRedisStandardList);
-        //循环以数据库为标准的结果
-        List<ExaminationIdentifierResult> simpleExaminationIdentifierResultDbStandardList = simpleExaminationIdentifierResultList(examinationIdentifierResultDbStandardList);
-        //优化精简后的
-        List<ExaminationIdentifierResult> examinationIdentifierResultList = new ArrayList<>();
-        if (CollectionUtil.isNotEmpty(simpleExaminationIdentifierResultRedisStandardList)) {
-            examinationIdentifierResultList.addAll(simpleExaminationIdentifierResultRedisStandardList);
-        }
-        if (CollectionUtil.isNotEmpty(simpleExaminationIdentifierResultDbStandardList)) {
-            examinationIdentifierResultList.addAll(simpleExaminationIdentifierResultDbStandardList);
-        }
-        //精简后的对比结果
-        return new ExaminationSimpleResult(programId, examinationIdentifierResultList);
-    }
-    
-    public List<ExaminationIdentifierResult> simpleExaminationIdentifierResultList(List<ExaminationIdentifierResult> examinationIdentifierResultList) {
-        List<ExaminationIdentifierResult> simpleExaminationIdentifierResultList = new ArrayList<>();
-        for (ExaminationIdentifierResult examinationIdentifierResult : examinationIdentifierResultList) {
-            String identifierId = examinationIdentifierResult.getIdentifierId();
-            String userId = examinationIdentifierResult.getUserId();
-            List<ExaminationRecordTypeResult> examinationRecordTypeResultList = examinationIdentifierResult.getExaminationRecordTypeResultList();
-            if (CollectionUtil.isEmpty(examinationRecordTypeResultList)) {
-                continue;
-            }
-            //redis和数据对账结果(记录类型维度)，精简过的集合
-            List<ExaminationRecordTypeResult> examinationRecordTypeResultListV2 = new ArrayList<>();
-            for (ExaminationRecordTypeResult examinationRecordTypeResult : examinationRecordTypeResultList) {
-                ExaminationSeatResult examinationSeatResult = examinationRecordTypeResult.getExaminationSeatResult();
-                //需要向redis中补充的座位
-                List<OrderTicketUserRecord> needToRedisSeatRecordList = examinationSeatResult.getNeedToRedisSeatRecordList();
-                if (CollectionUtil.isNotEmpty(needToRedisSeatRecordList)) {
-                    examinationRecordTypeResultListV2.add(examinationRecordTypeResult);
-                }
-            }
-            simpleExaminationIdentifierResultList.add(new ExaminationIdentifierResult(identifierId, userId, examinationRecordTypeResultListV2));
-        }
-        return simpleExaminationIdentifierResultList;
-    }
-    
-    public ReconciliationTaskData reconciliationTask(Long programId) {
-        //查询redis中的节目记录
-        Map<String, String> programRecordMap = redisCache.getAllMapForHash(RedisKeyBuild.createRedisKey(RedisKeyManage.PROGRAM_RECORD, programId), String.class);
-        //key：记录标识_用户id   value：有顺序的ProgramRecord集合，顺序为reduce、changeStatus、increase
-        Map<String, List<ProgramRecord>> needToRedisRecordMap = new HashMap<>(64);
-        //对比出来的结果
-        ExaminationSimpleResult examinationSimpleResult = reconciliationQuerySimple(programId, programRecordMap);
-        List<ExaminationIdentifierResult> examinationIdentifierResultList = examinationSimpleResult.getExaminationIdentifierResultList();
-        int reconciliationSuccessCount = 1;
-        for (ExaminationIdentifierResult examinationIdentifierResult : examinationIdentifierResultList) {
-            String identifierId = examinationIdentifierResult.getIdentifierId();
-            String userId = examinationIdentifierResult.getUserId();
-            List<ExaminationRecordTypeResult> examinationRecordTypeResultList = examinationIdentifierResult.getExaminationRecordTypeResultList();
-            if (CollectionUtil.isEmpty(examinationRecordTypeResultList)) {
-                if (reconciliationSuccessCount == 1) {
-                    //如果没有记录类型的话，说明流水都是正常记录的，redis和数据库对账结果一致
-                    programRecordHandler.add(0, programId, null, programRecordMap);
-                }
-                reconciliationSuccessCount++;
-                continue;
-            }
-            List<ProgramRecord> programRecordList = new ArrayList<>();
-            for (ExaminationRecordTypeResult examinationRecordTypeResult : examinationRecordTypeResultList) {
-                ProgramRecord programRecord = new ProgramRecord();
-                Integer recordTypeCode = examinationRecordTypeResult.getRecordTypeCode();
-                String recordTypeValue = examinationRecordTypeResult.getRecordTypeValue();
-                ExaminationSeatResult examinationSeatResult = examinationRecordTypeResult.getExaminationSeatResult();
-                List<SeatRecord> seatRecordAllList = new ArrayList<>();
-                //需要向redis中补充的数据
-                List<OrderTicketUserRecord> needToRedisSeatRecordList = examinationSeatResult.getNeedToRedisSeatRecordList();
-                for (OrderTicketUserRecord orderTicketUserRecord : needToRedisSeatRecordList) {
-                    //构建redis的操作记录(座位层)
-                    SeatRecord seatRecord = new SeatRecord();
-                    seatRecord.setSeatId(orderTicketUserRecord.getSeatId());
-                    seatRecord.setTicketCategoryId(orderTicketUserRecord.getTicketCategoryId());
-                    seatRecord.setTicketUserId(orderTicketUserRecord.getTicketUserId());
-                    if (Objects.equals(recordTypeCode, RecordType.REDUCE.getCode())) {
-                        seatRecord.setBeforeStatus(SellStatus.NO_SOLD.getCode());
-                        seatRecord.setAfterStatus(SellStatus.LOCK.getCode());
-                    } else if (Objects.equals(recordTypeCode, RecordType.CHANGE_STATUS.getCode())) {
-                        seatRecord.setBeforeStatus(SellStatus.LOCK.getCode());
-                        seatRecord.setAfterStatus(SellStatus.SOLD.getCode());
-                    } else if (Objects.equals(recordTypeCode, RecordType.INCREASE.getCode())) {
-                        seatRecord.setBeforeStatus(SellStatus.LOCK.getCode());
-                        seatRecord.setAfterStatus(SellStatus.NO_SOLD.getCode());
-                    }
-                    seatRecordAllList.add(seatRecord);
-                }
-                List<TicketCategoryRecord> ticketCategoryRecordList = new ArrayList<>();
-                //key：票档id，value：seatRecord集合
-                Map<Long, List<SeatRecord>> seatRecordMap = seatRecordAllList.stream().collect(Collectors.groupingBy(SeatRecord::getTicketCategoryId));
-                for (Map.Entry<Long, List<SeatRecord>> seatRecordEntry : seatRecordMap.entrySet()) {
-                    TicketCategoryRecord ticketCategoryRecord = new TicketCategoryRecord();
-                    Long ticketCategoryId = seatRecordEntry.getKey();
-                    List<SeatRecord> seatRecordList = seatRecordEntry.getValue();
-                    ticketCategoryRecord.setTicketCategoryId(ticketCategoryId);
-                    ticketCategoryRecord.setSeatRecordList(seatRecordList);
-                    ticketCategoryRecordList.add(ticketCategoryRecord);
-                }
-                //构建redis的操作记录
-                programRecord.setRecordType(recordTypeValue);
-                programRecord.setTimestamp(System.currentTimeMillis());
-                programRecord.setTicketCategoryRecordList(ticketCategoryRecordList);
-                programRecordList.add(programRecord);
-            }
-            //排序，顺序为reduce、changeStatus、increase
-            programRecordList.sort(Comparator.comparingInt(pr -> RecordType.getCodeByValue(pr.getRecordType())));
-            needToRedisRecordMap.put(identifierId + GLIDE_LINE + userId, programRecordList);
-            //向redis添加数据
-            Map<String, ProgramRecord> addRedisRecordData = compensateRedisRecord(programId, needToRedisRecordMap, programRecordMap);
-            ReconciliationTaskData reconciliationTaskData = new ReconciliationTaskData();
-            reconciliationTaskData.setProgramId(programId);
-            reconciliationTaskData.setAddRedisRecordData(addRedisRecordData);
-            return reconciliationTaskData;
-        } 
-        return null;
-    }
-    
-    /**
-     * @param programId 节目id
-     * @param needToRedisRecordMap value:记录标识_用户id   value：有顺序的ProgramRecord集合，顺序为reduce、changeStatus、increase
-     * @param programRecordMap 查询redis中的节目记录
-     * */
-    public Map<String, ProgramRecord> compensateRedisRecord(Long programId, 
-                                                            Map<String, List<ProgramRecord>> needToRedisRecordMap, 
-                                                            Map<String, String> programRecordMap) {
-        //需要补充的票档id集合
-        Set<Long> ticketCategoryIdSet = getTicketCategoryIdSet(needToRedisRecordMap);
-        //获取节目票档集合
-        TicketCategoryListDto ticketCategoryListDto = new TicketCategoryListDto();
-        ticketCategoryListDto.setProgramId(programId);
-        ticketCategoryListDto.setTicketCategoryIdList(ticketCategoryIdSet);
-        ApiResponse<List<TicketCategoryDetailVo>> programApiResponse = programClient.selectList(ticketCategoryListDto);
-        if (!Objects.equals(programApiResponse.getCode(), BaseCode.SUCCESS.getCode())) {
-            throw new DaMaiFrameException(programApiResponse);
-        }
-        List<TicketCategoryDetailVo> ticketCategoryDetailVoList = programApiResponse.getData();
         
-        //节目票档集合转成map，key：节目票档id，value：余票数量
-        Map<Long, Long> ticketCategoryRemainNumberMap = ticketCategoryDetailVoList.stream().collect(Collectors.toMap(TicketCategoryDetailVo::getId, TicketCategoryDetailVo::getRemainNumber, (v1, v2) -> v2));
-        //key：记录标识_用户id value：有顺序的ProgramRecord集合，顺序为reduce、changeStatus、increase
-        for (Map.Entry<String, List<ProgramRecord>> programRecordEntry : needToRedisRecordMap.entrySet()) {
-            //redis中记录类型集合，顺序为reduce、changeStatus、increase
-            List<ProgramRecord> programRecordList = programRecordEntry.getValue();
-            //逆向还原出扣减/恢复余票数量的记录
-            restoreSingleOrder(programRecordList, ticketCategoryRemainNumberMap);
+        // 步骤3: 查询数据库并对比，构建需要补偿的记录
+        // 返回格式: key=identifierId_userId, value=ProgramRecord列表(按reduce/changeStatus/increase排序)
+        Map<String, List<ProgramRecord>> needToRedisRecordMap = findNeedCompensationRecords(orderPrograms, redisRecordMap);
+        
+        // 步骤4: 执行补偿（如果有需要补偿的记录）、更新数据库状态、转移Redis记录
+        Map<String, ProgramRecord> addedRecords = compensateAndFinalize(programId, needToRedisRecordMap, redisRecordMap);
+        
+        // 步骤5: 构建返回结果
+        ReconciliationTaskData result = new ReconciliationTaskData();
+        result.setProgramId(programId);
+        result.setAddRedisRecordData(addedRecords);
+        return result;
+    }
+    
+    // ==================== 查找需要补偿的记录 ====================
+    
+    /**
+     * 查找需要向Redis补偿的记录（以数据库为准）
+     * 
+     * 执行流程：
+     * 1. 查询OrderTicketUserRecord表，获取未对账的购票人订单记录
+     * 2. 按 identifierId_userId 分组
+     * 3. 对比Redis，找出数据库有但Redis没有的记录
+     * 
+     * @param orderPrograms 未处理的订单列表
+     * @param redisRecordMap Redis中的节目记录
+     * @return key: identifierId_userId, value: ProgramRecord列表(按reduce/changeStatus/increase排序)
+     */
+    private Map<String, List<ProgramRecord>> findNeedCompensationRecords(List<OrderProgram> orderPrograms, Map<String, String> redisRecordMap) {
+        // 1. 批量查询未对账的购票人订单记录
+        List<Long> orderNumbers = orderPrograms.stream().map(OrderProgram::getOrderNumber).collect(Collectors.toList());
+        List<OrderTicketUserRecord> dbRecords = orderTicketUserRecordMapper.selectList(
+                Wrappers.lambdaQuery(OrderTicketUserRecord.class)
+                        .in(OrderTicketUserRecord::getOrderNumber, orderNumbers)
+                        .eq(OrderTicketUserRecord::getReconciliationStatus, ReconciliationStatus.RECONCILIATION_NO.getCode()));
+        if (CollectionUtil.isEmpty(dbRecords)) {
+            return Collections.emptyMap();
         }
-        return addRedisRecord(programId, needToRedisRecordMap, programRecordMap);
+        
+        // 2. 按 identifierId_userId 分组（同一用户同一订单的记录分为一组）
+        Map<String, List<OrderTicketUserRecord>> dbRecordsByUser = dbRecords.stream()
+                .collect(Collectors.groupingBy(r -> r.getIdentifierId() + GLIDE_LINE + r.getUserId()));
+        
+        // 3. 对比并构建补偿记录
+        Map<String, List<ProgramRecord>> result = new HashMap<>(64);
+        for (Map.Entry<String, List<OrderTicketUserRecord>> entry : dbRecordsByUser.entrySet()) {
+            List<ProgramRecord> programRecords = buildProgramRecordsForUser(entry.getValue(), redisRecordMap);
+            if (CollectionUtil.isNotEmpty(programRecords)) {
+                result.put(entry.getKey(), programRecords);
+            }
+        }
+        return result;
     }
     
     /**
-     * 逆向还原单笔订单的所有 ProgramRecord
-     *
-     * @param programRecords 按时间正序（最早到最新）排列的记录列表，顺序为reduce、changeStatus、increase
-     * @param ticketCategoryRemainNumberMap key：ticketCategoryId，value：当前（最新）剩余票数；会被本方法原地回退
+     * 执行补偿并完成对账（更新数据库状态 + 转移Redis记录）
+     * 
+     * 核心逻辑：
+     * - 如果有需要补偿的记录，先执行补偿逻辑（逆向还原余票、清除缓存）
+     * - 无论是否需要补偿，都要更新数据库对账状态和转移Redis记录
+     * 
+     * @param programId 节目id
+     * @param needToRedisRecordMap 需要补偿到Redis的记录（可能为空）
+     * @param redisRecordMap Redis中的节目记录
+     * @return 已补偿的记录（如果无需补偿则为空Map）
+     */
+    private Map<String, ProgramRecord> compensateAndFinalize(Long programId, 
+                                                              Map<String, List<ProgramRecord>> needToRedisRecordMap,
+                                                              Map<String, String> redisRecordMap) {
+        Map<String, ProgramRecord> completeRedisCordMap = new HashMap<>(64);
+        
+        // 1. 如果有需要补偿的记录，执行补偿逻辑
+        if (CollectionUtil.isNotEmpty(needToRedisRecordMap)) {
+            // 1.1 收集所有涉及的票档ID
+            Set<Long> ticketCategoryIdSet = getTicketCategoryIdSet(needToRedisRecordMap);
+            
+            // 1.2 调用节目服务获取票档的当前余票数量
+            TicketCategoryListDto ticketCategoryListDto = new TicketCategoryListDto();
+            ticketCategoryListDto.setProgramId(programId);
+            ticketCategoryListDto.setTicketCategoryIdList(ticketCategoryIdSet);
+            ApiResponse<List<TicketCategoryDetailVo>> programApiResponse = programClient.selectList(ticketCategoryListDto);
+            if (!Objects.equals(programApiResponse.getCode(), BaseCode.SUCCESS.getCode())) {
+                throw new DaMaiFrameException(programApiResponse);
+            }
+            List<TicketCategoryDetailVo> ticketCategoryDetailVoList = programApiResponse.getData();
+            
+            // 1.3 构建票档余票数量Map
+            Map<Long, Long> ticketCategoryRemainNumberMap = ticketCategoryDetailVoList.stream()
+                    .collect(Collectors.toMap(TicketCategoryDetailVo::getId, TicketCategoryDetailVo::getRemainNumber, (v1, v2) -> v2));
+            
+            // 1.4 逆向还原每笔订单的余票变化
+            for (Map.Entry<String, List<ProgramRecord>> programRecordEntry : needToRedisRecordMap.entrySet()) {
+                restoreSingleOrder(programRecordEntry.getValue(), ticketCategoryRemainNumberMap);
+            }
+            
+            // 1.5 构建补偿记录Map
+            for (Map.Entry<String, List<ProgramRecord>> redisRecordEntry : needToRedisRecordMap.entrySet()) {
+                String key = redisRecordEntry.getKey();
+                for (ProgramRecord programRecord : redisRecordEntry.getValue()) {
+                    completeRedisCordMap.put(programRecord.getRecordType() + GLIDE_LINE + key, programRecord);
+                }
+            }
+            
+            // 1.6 删除Redis中相关票档的座位和余票缓存
+            for (Long ticketCategoryId : ticketCategoryIdSet) {
+                seatHandler.delRedisSeatData(programId, ticketCategoryId);
+                ticketRemainNumberHandler.delRedisSeatData(programId, ticketCategoryId);
+            }
+        }
+        
+        // 2. 更新数据库状态 + 转移Redis记录（无论是否需要补偿都要执行）
+        // programRecordHandler.add 会执行：
+        //   - 更新Order/OrderTicketUser/OrderProgram/OrderTicketUserRecord的对账状态为RECONCILIATION_SUCCESS
+        //   - 从PROGRAM_RECORD中删除旧记录
+        //   - 将所有记录添加到PROGRAM_RECORD_FINISH
+        programRecordHandler.add(0, programId, completeRedisCordMap, redisRecordMap);
+        
+        return completeRedisCordMap;
+    }
+    
+    /**
+     * 为单个用户构建ProgramRecord列表
+     * 
+     * 执行流程：
+     * 1. 按记录类型(reduce/changeStatus/increase)分组
+     * 2. 对每种类型，找出数据库有但Redis没有的座位
+     * 3. 构建ProgramRecord
+     * 4. 按 reduce(-1) -> changeStatus(0) -> increase(1) 排序
+     * 
+     * @param userRecords 该用户的所有购票人订单记录
+     * @param redisRecordMap Redis中的节目记录
+     * @return ProgramRecord列表，按记录类型排序
+     */
+    private List<ProgramRecord> buildProgramRecordsForUser(List<OrderTicketUserRecord> userRecords, Map<String, String> redisRecordMap) {
+        // 1. 按记录类型分组（reduce/changeStatus/increase）
+        Map<String, List<OrderTicketUserRecord>> recordsByType = userRecords.stream()
+                .collect(Collectors.groupingBy(OrderTicketUserRecord::getRecordTypeValue));
+        
+        // 2. 遍历每种记录类型，构建ProgramRecord
+        List<ProgramRecord> result = new ArrayList<>();
+        for (Map.Entry<String, List<OrderTicketUserRecord>> entry : recordsByType.entrySet()) {
+            String recordType = entry.getKey();
+            List<OrderTicketUserRecord> typeRecords = entry.getValue();
+            
+            // 2.1 找出数据库有但Redis没有的座位
+            List<OrderTicketUserRecord> needCompensate = findMissingInRedis(typeRecords, redisRecordMap, recordType);
+            if (CollectionUtil.isEmpty(needCompensate)) {
+                continue;  // 该类型不需要补偿
+            }
+            
+            // 2.2 构建ProgramRecord
+            result.add(buildProgramRecord(needCompensate, recordType));
+        }
+        
+        // 3. 按记录类型排序：reduce(-1) -> changeStatus(0) -> increase(1)
+        result.sort(Comparator.comparingInt(pr -> RecordType.getCodeByValue(pr.getRecordType())));
+        return result;
+    }
+    
+    /**
+     * 找出数据库有但Redis没有的座位记录
+     * 
+     * 执行流程：
+     * 1. 构建Redis的key: recordType_identifierId_userId
+     * 2. 从Redis记录中提取座位ID集合
+     * 3. 过滤出数据库中存在但Redis中不存在的座位
+     * 
+     * @param dbRecords 数据库中的记录
+     * @param redisRecordMap Redis中的节目记录
+     * @param recordType 记录类型(reduce/changeStatus/increase)
+     * @return 需要补偿的记录列表
+     */
+    private List<OrderTicketUserRecord> findMissingInRedis(
+            List<OrderTicketUserRecord> dbRecords, Map<String, String> redisRecordMap, String recordType) {
+        if (CollectionUtil.isEmpty(dbRecords)) {
+            return Collections.emptyList();
+        }
+        
+        // 1. 构建Redis的key: recordType_identifierId_userId
+        OrderTicketUserRecord first = dbRecords.get(0);
+        String redisKey = recordType + GLIDE_LINE + first.getIdentifierId() + GLIDE_LINE + first.getUserId();
+        
+        // 2. 从Redis记录中提取座位ID集合
+        Set<Long> redisSeatIds = extractRedisSeatIds(redisRecordMap, redisKey);
+        
+        // 3. 返回数据库有但Redis没有的座位
+        return dbRecords.stream()
+                .filter(r -> !redisSeatIds.contains(r.getSeatId()))
+                .collect(Collectors.toList());
+    }
+    
+    /**
+     * 从Redis记录中提取座位ID集合
+     * 
+     * Redis记录结构：
+     * ProgramRecord
+     *   └── ticketCategoryRecordList (List<TicketCategoryRecord>)
+     *         └── seatRecordList (List<SeatRecord>)
+     *               └── seatId
+     * 
+     * @param redisRecordMap Redis中的节目记录
+     * @param key Redis的field key
+     * @return 座位ID集合
+     */
+    private Set<Long> extractRedisSeatIds(Map<String, String> redisRecordMap, String key) {
+        // 1. 检查Redis记录是否存在
+        if (redisRecordMap == null || redisRecordMap.get(key) == null) {
+            return Collections.emptySet();
+        }
+        
+        // 2. 解析JSON为ProgramRecord
+        ProgramRecord record = JSON.parseObject(redisRecordMap.get(key), ProgramRecord.class);
+        if (record == null || CollectionUtil.isEmpty(record.getTicketCategoryRecordList())) {
+            return Collections.emptySet();
+        }
+        
+        // 3. 提取所有座位ID
+        return record.getTicketCategoryRecordList().stream()
+                .filter(tcr -> CollectionUtil.isNotEmpty(tcr.getSeatRecordList()))
+                .flatMap(tcr -> tcr.getSeatRecordList().stream())
+                .map(SeatRecord::getSeatId)
+                .collect(Collectors.toSet());
+    }
+    
+    /**
+     * 构建ProgramRecord
+     * 
+     * 执行流程：
+     * 1. 将数据库记录转换为SeatRecord，并设置座位状态
+     * 2. 按票档ID分组
+     * 3. 构建ProgramRecord
+     * 
+     * @param records 需要补偿的数据库记录
+     * @param recordType 记录类型(reduce/changeStatus/increase)
+     * @return ProgramRecord
+     */
+    private ProgramRecord buildProgramRecord(List<OrderTicketUserRecord> records, String recordType) {
+        Integer recordTypeCode = RecordType.getCodeByValue(recordType);
+        
+        // 1. 转换为SeatRecord并设置状态，然后按票档ID分组
+        List<TicketCategoryRecord> ticketCategoryRecords = records.stream()
+                .map(r -> {
+                    SeatRecord seat = new SeatRecord();
+                    seat.setSeatId(r.getSeatId());
+                    seat.setTicketCategoryId(r.getTicketCategoryId());
+                    seat.setTicketUserId(r.getTicketUserId());
+                    // 根据记录类型设置座位的前后状态
+                    setSeatStatusByRecordType(seat, recordTypeCode);
+                    return seat;
+                })
+                .collect(Collectors.groupingBy(SeatRecord::getTicketCategoryId))  // 按票档分组
+                .entrySet().stream()
+                .map(e -> {
+                    TicketCategoryRecord tcr = new TicketCategoryRecord();
+                    tcr.setTicketCategoryId(e.getKey());
+                    tcr.setSeatRecordList(e.getValue());
+                    return tcr;
+                })
+                .collect(Collectors.toList());
+        
+        // 2. 构建ProgramRecord
+        ProgramRecord programRecord = new ProgramRecord();
+        programRecord.setRecordType(recordType);
+        programRecord.setTimestamp(System.currentTimeMillis());
+        programRecord.setTicketCategoryRecordList(ticketCategoryRecords);
+        return programRecord;
+    }
+    
+    // ==================== 座位状态设置 ====================
+    
+    /**
+     * 根据记录类型设置座位的前后状态
+     * 
+     * 状态变化规则：
+     * - reduce(扣减余票)：未售(NO_SOLD) -> 锁定(LOCK)
+     * - changeStatus(支付成功)：锁定(LOCK) -> 已售(SOLD)
+     * - increase(取消订单)：锁定(LOCK) -> 未售(NO_SOLD)
+     * 
+     * @param seatRecord 座位记录
+     * @param recordTypeCode 记录类型编码（-1=reduce, 0=changeStatus, 1=increase）
+     */
+    private void setSeatStatusByRecordType(SeatRecord seatRecord, Integer recordTypeCode) {
+        if (Objects.equals(recordTypeCode, RecordType.REDUCE.getCode())) {
+            // 扣减余票：未售 -> 锁定
+            seatRecord.setBeforeStatus(SellStatus.NO_SOLD.getCode());
+            seatRecord.setAfterStatus(SellStatus.LOCK.getCode());
+        } else if (Objects.equals(recordTypeCode, RecordType.CHANGE_STATUS.getCode())) {
+            // 改变状态（支付成功）：锁定 -> 已售
+            seatRecord.setBeforeStatus(SellStatus.LOCK.getCode());
+            seatRecord.setAfterStatus(SellStatus.SOLD.getCode());
+        } else if (Objects.equals(recordTypeCode, RecordType.INCREASE.getCode())) {
+            // 增加余票（取消订单）：锁定 -> 未售
+            seatRecord.setBeforeStatus(SellStatus.LOCK.getCode());
+            seatRecord.setAfterStatus(SellStatus.NO_SOLD.getCode());
+        }
+    }
+    
+    // ==================== 执行补偿 ====================
+    
+    /**
+     * 逆向还原单笔订单的所有ProgramRecord
+     * 
+     * 背景说明：
+     * - 补偿时需要填充每个票档的beforeAmount/afterAmount/changeAmount
+     * - 但我们只知道当前的余票数量，需要逆向还原出每一步操作的前后余票
+     * 
+     * 执行流程：
+     * 1. 将记录列表倒序（increase->changeStatus->reduce），从最新的记录开始还原
+     * 2. 对每条记录做逆向计算：
+     *    - reduce(扣减): 逆向要加回，beforeAmount = current + changeAmt
+     *    - increase(恢复): 逆向要再扣减，beforeAmount = current - changeAmt
+     *    - changeStatus: 不改票数
+     * 3. 还原完毕后再反转回来
+     * 
+     * @param programRecords 按时间正序排列的记录列表（reduce->changeStatus->increase）
+     * @param ticketCategoryRemainNumberMap key:票档id value:当前余票数量（会被本方法修改）
      */
     public void restoreSingleOrder(List<ProgramRecord> programRecords, Map<Long, Long> ticketCategoryRemainNumberMap) {
-        
-        //1. 把“从最早到最新”的列表倒过来，increase、changeStatus、reduce 最新地记录先还原
+        // 步骤1: 倒序，从最新的记录开始还原（increase->changeStatus->reduce）
         Collections.reverse(programRecords);
         
-        //2. 逐条记录做逆向“撤销”
+        // 步骤2: 逐条记录做逆向计算
         for (ProgramRecord programRecord : programRecords) {
-            //reduce、changeStatus、increase
             String recordType = programRecord.getRecordType();
-            //2.1 统计本条记录中，每个票档的 changeAmt（long）
-            //所有对应 TicketCategoryRecord.seatRecordList.size() 之和
-            //key：票档id，value：扣减或者恢复数量  
-            Map<Long, Long> changeAmtMap = programRecord.getTicketCategoryRecordList().stream().collect(Collectors.groupingBy(TicketCategoryRecord::getTicketCategoryId, Collectors.summingLong(tcr -> tcr.getSeatRecordList().size())));
-            //2.2 对本条记录每个票档做逆向计算
+            
+            // 2.1 统计本条记录中每个票档的变化数量
+            Map<Long, Long> changeAmtMap = programRecord.getTicketCategoryRecordList().stream()
+                    .collect(Collectors.groupingBy(
+                            TicketCategoryRecord::getTicketCategoryId, 
+                            Collectors.summingLong(tcr -> tcr.getSeatRecordList().size())));
+            
+            // 2.2 对每个票档做逆向计算
             for (Map.Entry<Long, Long> entry : changeAmtMap.entrySet()) {
                 Long categoryId = entry.getKey();
                 long changeAmt = entry.getValue();
-                
-                //当前（最新）剩余
                 long current = ticketCategoryRemainNumberMap.getOrDefault(categoryId, 0L);
                 
                 long beforeAmount;
@@ -531,21 +457,18 @@ public class OrderTaskService {
                     afterAmount = current;
                     beforeAmount = current + changeAmt;
                     ticketCategoryRemainNumberMap.put(categoryId, beforeAmount);
-                    
                 } else if (Objects.equals(recordType, RecordType.INCREASE.getValue())) {
                     // 原操作恢复 -> 逆向要再扣减
                     afterAmount = current;
                     beforeAmount = current - changeAmt;
                     ticketCategoryRemainNumberMap.put(categoryId, beforeAmount);
-                    
                 } else {
                     // 状态变更，不改票数
                     beforeAmount = current;
                     afterAmount = current;
-                    //ticketCategoryRemainNumberMap 保持不变
                 }
                 
-                //2.3 回填所有对应 TicketCategoryRecord 的字段
+                // 2.3 回填刨所有对应TicketCategoryRecord的字段
                 for (TicketCategoryRecord tcr : programRecord.getTicketCategoryRecordList()) {
                     if (tcr.getTicketCategoryId().equals(categoryId)) {
                         tcr.setBeforeAmount(beforeAmount);
@@ -555,45 +478,19 @@ public class OrderTaskService {
                 }
             }
         }
-        //3. 还原完毕后，如果后续需要再按正序使用 programRecords，可再反转回来
+        
+        // 步骤3: 还原完毕后反转回来（reduce->changeStatus->increase）
         Collections.reverse(programRecords);
     }
     
-    public Map<String, ProgramRecord> addRedisRecord(Long programId, Map<String, List<ProgramRecord>> needToRedisRecordMap, Map<String, String> programRecordMap) {
-        Set<Long> ticketCategoryIdSet = getTicketCategoryIdSet(needToRedisRecordMap);
-        //构建出要向redis添加记录的结构
-        //key：记录类型_记录标识_用户id value：ProgramRecord
-        Map<String, ProgramRecord> completeRedisCordMap = new HashMap<>(64);
-        //key：记录标识_用户id value：有顺序的ProgramRecord集合，顺序为reduce、changeStatus、increase
-        for (Map.Entry<String, List<ProgramRecord>> redisRecordEntry : needToRedisRecordMap.entrySet()) {
-            String key = redisRecordEntry.getKey();
-            List<ProgramRecord> programRecordList = redisRecordEntry.getValue();
-            for (ProgramRecord programRecord : programRecordList) {
-                completeRedisCordMap.put(programRecord.getRecordType() + GLIDE_LINE + key, programRecord);
-            }
-        }
-        for (Long ticketCategoryId : ticketCategoryIdSet) {
-            //删除redis中的座位
-            seatHandler.delRedisSeatData(programId, ticketCategoryId);
-            //删除redis中的余票数量
-            ticketRemainNumberHandler.delRedisSeatData(programId, ticketCategoryId);
-        }
-        //向redis中添加记录
-        programRecordHandler.add(0, programId, completeRedisCordMap, programRecordMap);
-        return completeRedisCordMap;
-    }
-    
-    public Set<Long> getTicketCategoryIdSet(Map<String, List<ProgramRecord>> needToRedisRecordMap) {
-        Set<Long> ticketCategoryIdSet = new HashSet<>();
-        for (Map.Entry<String, List<ProgramRecord>> programRecordEntry : needToRedisRecordMap.entrySet()) {
-            List<ProgramRecord> programRecordList = programRecordEntry.getValue();
-            for (ProgramRecord programRecord : programRecordList) {
-                List<TicketCategoryRecord> ticketCategoryRecordList = programRecord.getTicketCategoryRecordList();
-                for (TicketCategoryRecord ticketCategoryRecord : ticketCategoryRecordList) {
-                    ticketCategoryIdSet.add(ticketCategoryRecord.getTicketCategoryId());
-                }
-            }
-        }
-        return ticketCategoryIdSet;
+    /**
+     * 获取所有涉及的票档ID集合
+     */
+    private Set<Long> getTicketCategoryIdSet(Map<String, List<ProgramRecord>> needToRedisRecordMap) {
+        return needToRedisRecordMap.values().stream()
+                .flatMap(List::stream)
+                .flatMap(pr -> pr.getTicketCategoryRecordList().stream())
+                .map(TicketCategoryRecord::getTicketCategoryId)
+                .collect(Collectors.toSet());
     }
 }
