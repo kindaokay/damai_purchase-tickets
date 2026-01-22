@@ -200,7 +200,8 @@ public class OrderTaskService {
             
             // 1.3 构建票档余票数量Map
             Map<Long, Long> ticketCategoryRemainNumberMap = ticketCategoryDetailVoList.stream()
-                    .collect(Collectors.toMap(TicketCategoryDetailVo::getId, TicketCategoryDetailVo::getRemainNumber, (v1, v2) -> v2));
+                    .collect(Collectors.toMap(TicketCategoryDetailVo::getId, TicketCategoryDetailVo::getRemainNumber, 
+                            (v1, v2) -> v2));
             
             // 1.4 逆向还原每笔订单的余票变化
             for (Map.Entry<String, List<ProgramRecord>> programRecordEntry : needToRedisRecordMap.entrySet()) {

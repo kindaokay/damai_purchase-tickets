@@ -60,10 +60,13 @@ public class ProgramRecordHandler {
      * 向redis中添加补偿的记录，从未完成记录中转移到完整的记录
      * */
     @Transactional(rollbackFor = Exception.class)
-    public void add(int retryCount,Long programId,Map<String, ProgramRecord> completeRedisCordMap,Map<String, String> totalProgramRecordMap){
+    public void add(int retryCount,Long programId,
+                    Map<String, ProgramRecord> completeRedisCordMap,
+                    Map<String, String> totalProgramRecordMap){
         int maxRetryCount = 5;
         if (retryCount > maxRetryCount) {
-            log.error("添加记录流水失败超过最大重试次数,retryCount:{} programId:{}, completeRedisCordMap:{}, totalProgramRecordMap:{}", retryCount,programId, completeRedisCordMap, totalProgramRecordMap);
+            log.error("添加记录流水失败超过最大重试次数,retryCount:{} programId:{}, completeRedisCordMap:{}, " +
+                    "totalProgramRecordMap:{}", retryCount,programId, completeRedisCordMap, totalProgramRecordMap);
             throw new DaMaiFrameException(BaseCode.MAX_RETRY_COUNT);
         }
         try {
@@ -75,24 +78,31 @@ public class ProgramRecordHandler {
                 String[] split = SplitUtil.toSplit(key);
                 Long identifierId = Long.valueOf(split[0]);
                 Long userId = Long.valueOf(split[1]);
-                int result = updateDbOrderTicketUserRecordStatus(programId, identifierId, userId, ReconciliationStatus.RECONCILIATION_SUCCESS);
-                log.info("修改数据库记录流水成功, programId:{}, identifierId:{}, userId:{}, result:{}", programId, identifierId, userId, result);
+                int result = updateDbOrderTicketUserRecordStatus(programId, identifierId, userId,
+                        ReconciliationStatus.RECONCILIATION_SUCCESS);
+                log.info("修改数据库记录流水成功, programId:{}, identifierId:{}, userId:{}, result:{}", 
+                        programId, identifierId, userId, result);
             }
             if (CollectionUtil.isNotEmpty(totalProgramRecordMap)) {
                 //从旧地记录中删除
-                redisCache.delForHash(RedisKeyBuild.createRedisKey(RedisKeyManage.PROGRAM_RECORD, programId),totalProgramRecordMap.keySet());
+                redisCache.delForHash(RedisKeyBuild.createRedisKey(RedisKeyManage.PROGRAM_RECORD, programId),
+                        totalProgramRecordMap.keySet());
             }
             if (CollectionUtil.isNotEmpty(totalProgramRecordMap)) {
                 //目前所有的记录添加到完成的记录中 key：记录类型_记录标识_用户id value：记录标识
-                redisCache.putHash(RedisKeyBuild.createRedisKey(RedisKeyManage.PROGRAM_RECORD_FINISH, programId), totalProgramRecordMap);
+                redisCache.putHash(RedisKeyBuild.createRedisKey(RedisKeyManage.PROGRAM_RECORD_FINISH, programId), 
+                        totalProgramRecordMap);
             }
             if (CollectionUtil.isNotEmpty(completeRedisCordMap)) {
                 //将新补充的记录添加到redis对比完成的记录中
-                redisCache.putHash(RedisKeyBuild.createRedisKey(RedisKeyManage.PROGRAM_RECORD_FINISH, programId), completeRedisCordMap);
-                log.info("添加记录流水成功, programId:{}, completeRedisCordMap:{}, totalProgramRecordMap:{}", programId, completeRedisCordMap, totalProgramRecordMap);
+                redisCache.putHash(RedisKeyBuild.createRedisKey(RedisKeyManage.PROGRAM_RECORD_FINISH, programId), 
+                        completeRedisCordMap);
+                log.info("添加记录流水成功, programId:{}, completeRedisCordMap:{}, totalProgramRecordMap:{}", 
+                        programId, completeRedisCordMap, totalProgramRecordMap);
             }
         }catch (Exception e) {
-            log.warn("添加记录流水失败进行重试, programId:{}, completeRedisCordMap:{}, totalProgramRecordMap:{}", programId, completeRedisCordMap, totalProgramRecordMap, e);
+            log.warn("添加记录流水失败进行重试, programId:{}, completeRedisCordMap:{}, totalProgramRecordMap:{}", 
+                    programId, completeRedisCordMap, totalProgramRecordMap, e);
             try {
                 Thread.sleep(1000);
             } catch (InterruptedException ex) {
