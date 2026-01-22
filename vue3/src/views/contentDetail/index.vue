@@ -80,6 +80,7 @@
                 </div>
                 <div class="buy">
                   <div class="buy-link-now" @click="nowBuy">立即购买</div>
+                  <div class="buy-link-seat" v-if="detailList.permitChooseSeat=='1'" @click="seatBuy">选座购买</div>
                   <!--                    <router-link class="buy-link" to="/order/index">不，选座购买</router-link>-->
 <!--                  <div class="subtitle">请您移步手机端购买</div>
                   <div class="qrcode">
@@ -330,6 +331,11 @@ const nowBuy=()=>{
         {'detailList':JSON.stringify(detailList.value),'allPrice':allPrice.value,
           'countPrice':countPrice.value,'num':num.value,'ticketCategoryId':ticketCategoryId.value}})
 
+}
+
+const seatBuy=()=>{
+  router.replace({path:'/order/seatSelect',state:
+        {'detailList':JSON.stringify(detailList.value)}})
 }
 
 getRecommendList()
@@ -678,8 +684,9 @@ function getRecommendList(){
               margin-top: 20px;
               .buy-link-now{
                 width: 100px;
-                display: block;
+                display: inline-block;
                 margin-bottom: 24px;
+                margin-right: 15px;
                 height: 35px;
                 line-height: 35px;
                 font-size: 12px;
@@ -688,6 +695,23 @@ function getRecommendList(){
                 cursor: pointer;
                 background-color: rgba(255, 55, 29, 0.85);
                 border-radius: 36px;
+              }
+              .buy-link-seat{
+                width: 100px;
+                display: inline-block;
+                margin-bottom: 24px;
+                height: 35px;
+                line-height: 35px;
+                font-size: 12px;
+                text-align: center;
+                color: rgba(255, 55, 29, 0.85);
+                cursor: pointer;
+                background-color: #fff;
+                border: 1px solid rgba(255, 55, 29, 0.85);
+                border-radius: 36px;
+              }
+              .buy-link-seat:hover{
+                background-color: rgba(255, 55, 29, 0.1);
               }
 
 

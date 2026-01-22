@@ -8,6 +8,15 @@
           <div class="line"></div>
           <div class="time"><span>{{ formatDateWithWeekday(detailList.showTime, detailList.showWeekTime) }}</span></div>
           <div class="money"><span>￥<span v-if="allPrice == ''">{{countPrice}}</span><span v-else>{{allPrice}}</span>票档</span><span >×<span  v-if="allPrice == ''">1</span><span  v-else>{{num}}</span>张</span></div>
+          <!-- 选座信息展示 -->
+          <div class="seat-info" v-if="isChooseSeat && selectedSeatsData.length > 0">
+            <span class="seat-label">已选座位：</span>
+            <span class="seat-list">
+              <span v-for="seat in selectedSeatsData" :key="seat.id" class="seat-item">
+                {{ seat.rowCode }}排{{ seat.colCode }}座(￥{{ seat.price }})
+              </span>
+            </span>
+          </div>
           <div class="order-info">
             <span>按付款顺序配票，优先连座配票</span>
           </div>
@@ -157,6 +166,10 @@ const ticketUserIdArr = ref([])
 const ticketCategoryId = ref('')
 const orderNumberCache = ref('')
 const loading = ref(false)
+// 选座相关数据
+const seatIdList = ref([])
+const isChooseSeat = ref(false)
+const selectedSeatsData = ref([])
 const svg = `
         <path class="path" d="
           M 30 15
@@ -178,6 +191,12 @@ onMounted(()=>{
   countPrice.value  =history.state.countPrice
   num.value  =history.state.num
   ticketCategoryId.value = history.state.ticketCategoryId
+  // 接收选座数据
+  if (history.state.isChooseSeat) {
+    isChooseSeat.value = true
+    seatIdList.value = JSON.parse(history.state.seatIdList || '[]')
+    selectedSeatsData.value = JSON.parse(history.state.selectedSeats || '[]')
+  }
 })
 
 getPersonInfoIdList()
@@ -270,7 +289,8 @@ function submitOrder(){
     'userId':useUser.userId,
     'ticketUserIdList':ticketUserIdArr.value,
     'ticketCategoryId':ticketCategoryId.value,
-    'ticketCount':num.value
+    'ticketCount':num.value,
+    'seatIdList': isChooseSeat.value ? seatIdList.value : []
   }
 
   const createOrderVersion = import.meta.env.VITE_CREATE_ORDER_VERSION
@@ -561,6 +581,33 @@ onBeforeUnmount(() => {
           flex-shrink: 0;
           flex-grow: 0;
           height: fit-content;
+        }
+
+        .seat-info {
+          position: relative;
+          display: flex;
+          flex-wrap: wrap;
+          margin-left: 43px;
+          margin-top: 10px;
+          font-size: 20px;
+          color: rgb(255, 255, 255);
+          
+          .seat-label {
+            margin-right: 10px;
+          }
+          
+          .seat-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            
+            .seat-item {
+              background: rgba(255, 255, 255, 0.2);
+              padding: 4px 10px;
+              border-radius: 4px;
+              font-size: 18px;
+            }
+          }
         }
 
       }
