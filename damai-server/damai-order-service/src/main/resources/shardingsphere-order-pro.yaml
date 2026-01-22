@@ -102,12 +102,12 @@ rules:
           strategy: complex
           algorithmClassName: com.damai.shardingsphere.TableOrderComplexGeneArithmetic
       databaseOrderProgramModModel:
-        type: MOD
+        type: INLINE
         props:
-          sharding-count: 2
+          algorithm-expression: ds_${program_id % 2}
       tableOrderProgramModModel:
-        type: MOD
+        type: INLINE
         props:
-          sharding-count: 2
+          algorithm-expression: d_order_program_${(program_id.intdiv(2)) % 2}
 props:
   sql-show: true

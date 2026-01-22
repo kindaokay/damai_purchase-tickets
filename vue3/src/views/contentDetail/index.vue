@@ -79,8 +79,8 @@
                   </div>
                 </div>
                 <div class="buy">
-                  <div class="buy-link-now" @click="nowBuy">立即购买</div>
-                  <div class="buy-link-seat" v-if="detailList.permitChooseSeat=='1'" @click="seatBuy">选座购买</div>
+                  <div class="buy-link-now" v-if="detailList.permitChooseSeat!='1'" @click="nowBuy">立即购买</div>
+                  <div class="buy-link-now" v-if="detailList.permitChooseSeat=='1'" @click="seatBuy">选座购买</div>
                   <!--                    <router-link class="buy-link" to="/order/index">不，选座购买</router-link>-->
 <!--                  <div class="subtitle">请您移步手机端购买</div>
                   <div class="qrcode">
@@ -135,7 +135,6 @@
         <div class="box-right">
           <div class="service">
 
-            <div class="sit" v-show="detailList.permitChooseSeat=='1'">查看座位图</div>
             <div class="service-note">
               <div class="service-name" v-if="detailList.permitRefund!=''">
                 <i class="icon-no" v-if="detailList.permitRefund=='0'"></i><span v-if="detailList.permitRefund=='0'">不支持退</span>

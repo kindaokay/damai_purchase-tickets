@@ -284,13 +284,26 @@ function submitOrder(){
     return;
   }
 
-  const orderCreateParams = {
-    'programId':detailList.value.id,
-    'userId':useUser.userId,
-    'ticketUserIdList':ticketUserIdArr.value,
-    'ticketCategoryId':ticketCategoryId.value,
-    'ticketCount':num.value,
-    'seatIdList': isChooseSeat.value ? seatIdList.value : []
+  // 根据是否手动选座构建不同的请求参数
+  let orderCreateParams = {
+    'programId': detailList.value.id,
+    'userId': useUser.userId,
+    'ticketUserIdList': ticketUserIdArr.value
+  }
+
+  if (isChooseSeat.value && selectedSeatsData.value.length > 0) {
+    // 手动选座：传 seatDtoList
+    orderCreateParams.seatDtoList = selectedSeatsData.value.map(seat => ({
+      id: seat.id,
+      ticketCategoryId: seat.ticketCategoryId,
+      rowCode: parseInt(seat.rowCode),
+      colCode: parseInt(seat.colCode),
+      price: seat.price
+    }))
+  } else {
+    // 自动选座：传 ticketCategoryId 和 ticketCount
+    orderCreateParams.ticketCategoryId = ticketCategoryId.value
+    orderCreateParams.ticketCount = num.value
   }
 
   const createOrderVersion = import.meta.env.VITE_CREATE_ORDER_VERSION

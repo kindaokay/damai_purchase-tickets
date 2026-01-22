@@ -211,7 +211,7 @@ public class SeatService extends ServiceImpl<SeatMapper, Seat> {
             BigDecimal price = seatBatchRelateInfoAddDto.getPrice();
             Integer count = seatBatchRelateInfoAddDto.getCount();
             
-            int colCount = 10;
+            int colCount = seatBatchRelateInfoAddDto.getColCount();
             int rowCount = count / colCount;
             
             for (int i = 1;i<= rowCount;i++) {

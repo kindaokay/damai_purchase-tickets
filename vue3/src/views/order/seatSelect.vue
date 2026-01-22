@@ -33,28 +33,68 @@
           <div class="stage-box">
             <span>舞台</span>
           </div>
-          <!-- 场馆轮廓 -->
+          <!-- 场馆轮廓 - 梯形效果 -->
           <div class="venue-outline">
             <div class="seat-map-container">
             <div 
-              v-for="row in allRows" 
+              v-for="(row, rowIndex) in allRows" 
               :key="row.rowCode" 
               class="seat-row"
+              :style="getRowStyle(rowIndex)"
             >
               <span class="row-label">{{ row.rowCode }}排</span>
               <div class="seats">
-                <div 
-                  v-for="seat in row.seats" 
-                  :key="seat.id"
-                  class="seat"
-                  :class="getSeatClass(seat)"
-                  @click="toggleSeat(seat)"
-                  :title="`${seat.rowCode}排${seat.colCode}座 ¥${seat.price}`"
-                >
-                  <span 
-                    class="seat-dot"
-                    :style="{ backgroundColor: getSeatColor(seat), opacity: getSeatOpacity(seat) }"
-                  ></span>
+                <!-- 左区座位 -->
+                <div class="seat-section left-section">
+                  <div 
+                    v-for="seat in getLeftSeats(row.seats)" 
+                    :key="seat.id"
+                    class="seat"
+                    :class="getSeatClass(seat)"
+                    @click="toggleSeat(seat)"
+                    :title="`${seat.rowCode}排${seat.colCode}座 ¥${seat.price}`"
+                  >
+                    <span 
+                      class="seat-dot"
+                      :style="{ backgroundColor: getSeatColor(seat), opacity: getSeatOpacity(seat) }"
+                    ></span>
+                  </div>
+                </div>
+                <!-- 左过道 -->
+                <div class="aisle"></div>
+                <!-- 中区座位 -->
+                <div class="seat-section center-section">
+                  <div 
+                    v-for="seat in getCenterSeats(row.seats)" 
+                    :key="seat.id"
+                    class="seat"
+                    :class="getSeatClass(seat)"
+                    @click="toggleSeat(seat)"
+                    :title="`${seat.rowCode}排${seat.colCode}座 ¥${seat.price}`"
+                  >
+                    <span 
+                      class="seat-dot"
+                      :style="{ backgroundColor: getSeatColor(seat), opacity: getSeatOpacity(seat) }"
+                    ></span>
+                  </div>
+                </div>
+                <!-- 右过道 -->
+                <div class="aisle"></div>
+                <!-- 右区座位 -->
+                <div class="seat-section right-section">
+                  <div 
+                    v-for="seat in getRightSeats(row.seats)" 
+                    :key="seat.id"
+                    class="seat"
+                    :class="getSeatClass(seat)"
+                    @click="toggleSeat(seat)"
+                    :title="`${seat.rowCode}排${seat.colCode}座 ¥${seat.price}`"
+                  >
+                    <span 
+                      class="seat-dot"
+                      :style="{ backgroundColor: getSeatColor(seat), opacity: getSeatOpacity(seat) }"
+                    ></span>
+                  </div>
                 </div>
               </div>
               <span class="row-label">{{ row.rowCode }}排</span>
@@ -158,7 +198,7 @@ const filteredSeatMap = computed(() => {
   return filtered
 })
 
-// 获取所有行的座位数据（始终显示所有座位，不筛选隐藏）
+// 获取所有行的座位数据（并根据行号计算梯形显示）
 const allRows = computed(() => {
   const rowMap = {}
   // 始终显示所有票档的座位
@@ -180,7 +220,29 @@ const allRows = computed(() => {
   })
   
   // 按行号排序返回
-  return Object.values(rowMap).sort((a, b) => Number(a.rowCode) - Number(b.rowCode))
+  const sortedRows = Object.values(rowMap).sort((a, b) => Number(a.rowCode) - Number(b.rowCode))
+  
+  // 为每行计算梯形显示的座位
+  const totalRows = sortedRows.length
+  return sortedRows.map((row, rowIndex) => {
+    // 前排显示比例小，后排显示比例大，形成梯形
+    // 第一排显示60%，最后一排显示100%
+    const minRatio = 0.55  // 前排最小显示比例
+    const maxRatio = 1.0   // 后排最大显示比例
+    const ratio = minRatio + (rowIndex / Math.max(totalRows - 1, 1)) * (maxRatio - minRatio)
+    
+    const totalSeats = row.seats.length
+    const displayCount = Math.ceil(totalSeats * ratio)
+    // 从中间截取座位，保持居中显示
+    const skipCount = Math.floor((totalSeats - displayCount) / 2)
+    
+    return {
+      rowCode: row.rowCode,
+      seats: row.seats.slice(skipCount, skipCount + displayCount),
+      allSeats: row.seats,  // 保留全部座位用于其他计算
+      rowIndex: rowIndex
+    }
+  })
 })
 
 // 计算总价
@@ -256,6 +318,34 @@ const getSeatClass = (seat) => {
     'seat-sold': seat.sellStatus !== '1',
     'seat-selected': isSelected
   }
+}
+
+// 获取行样式 - 梯形效果已通过座位数量实现
+const getRowStyle = (rowIndex) => {
+  return {}
+}
+
+// 将座位分成三个区域：左、中、右
+const getLeftSeats = (seats) => {
+  const total = seats.length
+  if (total < 6) return []  // 座位太少就不分区
+  const leftCount = Math.max(Math.floor(total * 0.18), 2)  // 左区约18%
+  return seats.slice(0, leftCount)
+}
+
+const getCenterSeats = (seats) => {
+  const total = seats.length
+  if (total < 6) return seats  // 座位太少就全部放中间
+  const leftCount = Math.max(Math.floor(total * 0.18), 2)
+  const rightCount = Math.max(Math.floor(total * 0.18), 2)
+  return seats.slice(leftCount, total - rightCount)
+}
+
+const getRightSeats = (seats) => {
+  const total = seats.length
+  if (total < 6) return []  // 座位太少就不分区
+  const rightCount = Math.max(Math.floor(total * 0.18), 2)  // 右区约18%
+  return seats.slice(total - rightCount)
 }
 
 // 切换座位选中状态
@@ -431,54 +521,49 @@ onMounted(() => {
       min-height: 500px;
       
       .venue-wrapper {
-        max-width: 1000px;
+        max-width: 1100px;
         margin: 0 auto;
         
         // 舞台提示框
         .stage-box {
-          width: 200px;
-          margin: 0 auto 20px;
-          padding: 12px 0;
+          width: 240px;
+          margin: 0 auto 25px;
+          padding: 14px 0;
           background: #fff;
-          border: 1px solid #ddd;
+          border: 2px solid #d0d5dc;
+          border-radius: 4px;
           text-align: center;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
           
           span {
-            font-size: 20px;
+            font-size: 18px;
             color: #333;
             font-weight: 500;
+            letter-spacing: 8px;
           }
         }
         
         // 场馆轮廓
         .venue-outline {
           background: #fff;
-          border-radius: 8px;
-          padding: 30px 20px 40px;
+          border-radius: 12px;
+          padding: 35px 30px 45px;
           position: relative;
           border: 3px solid #d0d5dc;
           
-          // 上方梯形效果
-          &::before {
-            content: '';
-            position: absolute;
-            top: -3px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 70%;
-            height: 3px;
-            background: #fff;
-          }
-          
           .seat-map-container {
+            position: relative;
+            z-index: 1;
+            
             .seat-row {
               display: flex;
               align-items: center;
               justify-content: center;
-              margin-bottom: 6px;
+              margin-bottom: 8px;
+              transition: padding 0.3s ease;
               
               .row-label {
-                width: 50px;
+                width: 45px;
                 font-size: 12px;
                 color: #999;
                 text-align: center;
@@ -488,9 +573,33 @@ onMounted(() => {
               .seats {
                 display: flex;
                 justify-content: center;
-                gap: 4px;
+                align-items: center;
                 flex: 1;
-                max-width: 700px;
+                
+                // 座位区域
+                .seat-section {
+                  display: flex;
+                  gap: 3px;
+                  
+                  &.left-section {
+                    justify-content: flex-end;
+                  }
+                  
+                  &.center-section {
+                    justify-content: center;
+                  }
+                  
+                  &.right-section {
+                    justify-content: flex-start;
+                  }
+                }
+                
+                // 过道间隔
+                .aisle {
+                  width: 25px;
+                  height: 16px;
+                  flex-shrink: 0;
+                }
                 
                 .seat {
                   width: 16px;
@@ -523,6 +632,12 @@ onMounted(() => {
                   }
                 }
               }
+            }
+            
+            // 上下区域之间的横向过道
+            .horizontal-aisle {
+              height: 20px;
+              margin: 5px 0;
             }
           }
         }

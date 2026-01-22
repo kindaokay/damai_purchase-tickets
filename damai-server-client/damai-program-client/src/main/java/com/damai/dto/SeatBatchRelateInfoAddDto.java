@@ -28,4 +28,8 @@ public class SeatBatchRelateInfoAddDto {
     @Schema(name ="count", type ="Integer", description ="添加的座位数量",requiredMode= RequiredMode.REQUIRED)
     @NotNull
     private Integer count;
+    
+    @Schema(name ="colCount", type ="Integer", description ="每行的列数",requiredMode= RequiredMode.REQUIRED)
+    @NotNull
+    private Integer colCount = 10;
 }

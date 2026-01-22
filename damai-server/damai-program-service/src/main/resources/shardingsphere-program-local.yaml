@@ -1,149 +1,195 @@
-dataSources: 
+dataSources:
+  # 第一个节目库
   ds_0:
     dataSourceClassName: com.zaxxer.hikari.HikariDataSource
     driverClassName: com.mysql.cj.jdbc.Driver
     jdbcUrl: jdbc:mysql://127.0.0.1:3306/damai_program_0?useUnicode=true&characterEncoding=UTF-8&rewriteBatchedStatements=true&allowMultiQueries=true&serverTimezone=Asia/Shanghai&autoReconnect=true
     username: root
     password: root
-    hikari:
-      # 连接池配置优化
-      minimum-idle: 30                    # 最小空闲连接数(提升至30)
-      maximum-pool-size: 100              # 最大连接池大小(提升至100)
-      connection-timeout: 20000           # 连接超时时间(缩短至20秒)
-      idle-timeout: 300000                # 空闲连接超时时间(5分钟)
-      max-lifetime: 1800000               # 连接最大生命周期(30分钟)
-      leak-detection-threshold: 30000     # 连接泄漏检测阈值(30秒)
-      validation-timeout: 5000            # 连接验证超时时间(5秒)
-
+  # 第一个节目库
   ds_1:
     dataSourceClassName: com.zaxxer.hikari.HikariDataSource
     driverClassName: com.mysql.cj.jdbc.Driver
     jdbcUrl: jdbc:mysql://127.0.0.1:3306/damai_program_1?useUnicode=true&characterEncoding=UTF-8&rewriteBatchedStatements=true&allowMultiQueries=true&serverTimezone=Asia/Shanghai&autoReconnect=true
     username: root
     password: root
-    hikari:
-      # 连接池配置优化
-      minimum-idle: 30                    # 最小空闲连接数(提升至30)
-      maximum-pool-size: 100              # 最大连接池大小(提升至100)
-      connection-timeout: 20000           # 连接超时时间(缩短至20秒)
-      idle-timeout: 300000                # 空闲连接超时时间(5分钟)
-      max-lifetime: 1800000               # 连接最大生命周期(30分钟)
-      leak-detection-threshold: 30000     # 连接泄漏检测阈值(30秒)
-      validation-timeout: 5000            # 连接验证超时时间(5秒)
-    
+
 rules:
   - !SHARDING
     tables:
+      # 对d_program表进行分库分表
       d_program:
+        # 库为damai_program_0 damai_program_1 表为d_program_0 至 d_program_1
         actualDataNodes: ds_${0..1}.d_program_${0..1}
+        # 分库策略
         databaseStrategy:
           standard:
+            # 使用id作为分片键
             shardingColumn: id
+            # 使用id分库算法
             shardingAlgorithmName: databaseProgramModModel
+        # 分表策略
         tableStrategy:
           standard:
+            # 使用id作为分片键
             shardingColumn: id
+            # 使用id分表算法
             shardingAlgorithmName: tableProgramModModel
+      # 对d_program_group表进行分库分表      
       d_program_group:
+        # 库为damai_program_0 damai_program_1 表为d_program_group_0 至 d_program_group_1
         actualDataNodes: ds_${0..1}.d_program_group_${0..1}
+        # 分库策略
         databaseStrategy:
           standard:
+            # 使用id作为分片键
             shardingColumn: id
+            # 使用id分库算法
             shardingAlgorithmName: databaseProgramGroupModModel
+        # 分表策略    
         tableStrategy:
           standard:
+            # 使用id作为分片键
             shardingColumn: id
+            # 使用id分库算法
             shardingAlgorithmName: tableProgramGroupModModel
+      # 对d_program_show_time表进行分库分表
       d_program_show_time:
+        # 库为damai_program_0 damai_program_1 表为d_program_show_time_0 至 d_program_show_time_1
         actualDataNodes: ds_${0..1}.d_program_show_time_${0..1}
+        # 分库策略
         databaseStrategy:
           standard:
+            # 使用id作为分片键
             shardingColumn: program_id
+            # 使用id分库算法
             shardingAlgorithmName: databaseProgramShowTimeModModel
+        # 分表策略
         tableStrategy:
           standard:
+            # 使用id作为分片键
             shardingColumn: program_id
+            # 使用id分表算法
             shardingAlgorithmName: tableProgramShowTimeModModel
+      # 对d_seat表进行分库分表
       d_seat:
+        # 库为damai_program_0 damai_program_1 表为d_seat_0 至 d_seat_1
         actualDataNodes: ds_${0..1}.d_seat_${0..1}
+        # 分库策略
         databaseStrategy:
           standard:
+            # 使用id作为分片键
             shardingColumn: program_id
+            # 使用id分库算法
             shardingAlgorithmName: databaseSeatModModel
+        # 分表策略
         tableStrategy:
           standard:
+            # 使用id作为分片键
             shardingColumn: program_id
+            # 使用id分表算法
             shardingAlgorithmName: tableSeatModModel
+      # 对d_ticket_category表进行分库分表
       d_ticket_category:
+        # 库为damai_program_0 damai_program_1 表为d_ticket_category_0 至 d_ticket_category_1
         actualDataNodes: ds_${0..1}.d_ticket_category_${0..1}
+        # 分库策略
         databaseStrategy:
           standard:
+            # 使用id作为分片键
             shardingColumn: program_id
+            # 使用id分库算法
             shardingAlgorithmName: databaseTicketCategoryModModel
+        # 分表策略
         tableStrategy:
           standard:
+            # 使用id作为分片键
             shardingColumn: program_id
+            # 使用id分表算法
             shardingAlgorithmName: tableTicketCategoryModModel
+      # 对d_program_record_task表进行分库分表
       d_program_record_task:
+        # 库为damai_program_0 damai_program_1 表为d_program_record_task_0 至 d_program_record_task_1
         actualDataNodes: ds_${0..1}.d_program_record_task_${0..1}
+        # 分库策略
         databaseStrategy:
           standard:
+            # 使用create_time作为分片键
             shardingColumn: create_time
+            # 使用create_time分库算法
             shardingAlgorithmName: databaseProgramRecordTaskModModel
+        # 分表策略
         tableStrategy:
           standard:
+            # 使用create_time作为分片键
             shardingColumn: create_time
+            # 使用create_time分表算法
             shardingAlgorithmName: tableProgramRecordTaskModModel
+    # 广播表
     broadcastTables:
       - d_program_category
+    # 具体的算法（采用基因位分离策略：分库用低位bit0，分表用次低位bit1，避免数据倾斜）
     shardingAlgorithms:
+      # d_program表分库算法 - 使用id的低位(bit0)
       databaseProgramModModel:
-        type: MOD
+        type: INLINE
         props:
-          sharding-count: 2
+          algorithm-expression: ds_${id % 2}
+      # d_program表分表算法 - 使用id的次低位(bit1)
       tableProgramModModel:
-        type: MOD
+        type: INLINE
         props:
-          sharding-count: 2
+          algorithm-expression: d_program_${(id.intdiv(2)) % 2}
+      # d_program_group表分库算法 - 使用id的低位(bit0)
       databaseProgramGroupModModel:
-        type: MOD
+        type: INLINE
         props:
-          sharding-count: 2
+          algorithm-expression: ds_${id % 2}
+      # d_program_group表分表算法 - 使用id的次低位(bit1)
       tableProgramGroupModModel:
-        type: MOD
+        type: INLINE
         props:
-          sharding-count: 2    
+          algorithm-expression: d_program_group_${(id.intdiv(2)) % 2}
+      # d_program_show_time表分库算法 - 使用program_id的低位(bit0)
       databaseProgramShowTimeModModel:
-        type: MOD
+        type: INLINE
         props:
-          sharding-count: 2
+          algorithm-expression: ds_${program_id % 2}
+      # d_program_show_time表分表算法 - 使用program_id的次低位(bit1)
       tableProgramShowTimeModModel:
-        type: MOD
+        type: INLINE
         props:
-          sharding-count: 2
+          algorithm-expression: d_program_show_time_${(program_id.intdiv(2)) % 2}
+      # d_seat表分库算法 - 使用program_id的低位(bit0)
       databaseSeatModModel:
-        type: MOD
+        type: INLINE
         props:
-          sharding-count: 2
+          algorithm-expression: ds_${program_id % 2}
+      # d_seat表分表算法 - 使用program_id的次低位(bit1)
       tableSeatModModel:
-        type: MOD
+        type: INLINE
         props:
-          sharding-count: 2
+          algorithm-expression: d_seat_${(program_id.intdiv(2)) % 2}
+      # d_ticket_category表分库算法 - 使用program_id的低位(bit0)
       databaseTicketCategoryModModel:
-        type: MOD
+        type: INLINE
         props:
-          sharding-count: 2
+          algorithm-expression: ds_${program_id % 2}
+      # d_ticket_category表分表算法 - 使用program_id的次低位(bit1)
       tableTicketCategoryModModel:
-        type: MOD
+        type: INLINE
         props:
-          sharding-count: 2
+          algorithm-expression: d_ticket_category_${(program_id.intdiv(2)) % 2}
+      # d_program_record_task表分库算法 - 使用create_time的hashCode低位(bit0)
       databaseProgramRecordTaskModModel:
-        type: HASH_MOD
+        type: INLINE
         props:
-          sharding-count: 2
+          algorithm-expression: ds_${Math.abs(create_time.hashCode()) % 2}
+      # d_program_record_task表分表算法 - 使用create_time的hashCode次低位(bit1)
       tableProgramRecordTaskModModel:
-        type: HASH_MOD
+        type: INLINE
         props:
-          sharding-count: 2
+          algorithm-expression: d_program_record_task_${(Math.abs(create_time.hashCode()).intdiv(2)) % 2}
 props:
-  sql-show: false
+  # 打印真实sql
+  sql-show: true
