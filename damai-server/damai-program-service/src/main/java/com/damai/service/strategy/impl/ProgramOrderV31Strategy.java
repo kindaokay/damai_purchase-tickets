@@ -4,16 +4,13 @@ import com.damai.core.RepeatExecuteLimitConstants;
 import com.damai.dto.ProgramOrderCreateDto;
 import com.damai.enums.CompositeCheckType;
 import com.damai.enums.ProgramOrderVersion;
-import com.damai.initialize.base.AbstractApplicationCommandLineRunnerHandler;
 import com.damai.initialize.impl.composite.CompositeContainer;
 import com.damai.repeatexecutelimit.annotion.RepeatExecuteLimit;
 import com.damai.service.ProgramOrderService;
 import com.damai.service.strategy.BaseProgramOrder;
-import com.damai.service.strategy.ProgramOrderContext;
 import com.damai.service.strategy.ProgramOrderStrategy;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.stereotype.Component;
 
 /**
@@ -23,7 +20,7 @@ import org.springframework.stereotype.Component;
  **/
 @Slf4j
 @Component
-public class ProgramOrderV31Strategy extends AbstractApplicationCommandLineRunnerHandler implements ProgramOrderStrategy {
+public class ProgramOrderV31Strategy implements ProgramOrderStrategy {
     
     @Autowired
     private ProgramOrderService programOrderService;
@@ -44,12 +41,7 @@ public class ProgramOrderV31Strategy extends AbstractApplicationCommandLineRunne
     }
     
     @Override
-    public Integer executeOrder() {
-        return 3;
-    }
-    
-    @Override
-    public void executeInit(final ConfigurableApplicationContext context) {
-        ProgramOrderContext.add(ProgramOrderVersion.V31_VERSION.getVersion(),this);
+    public String version() {
+        return ProgramOrderVersion.V31_VERSION.getVersion();
     }
 }

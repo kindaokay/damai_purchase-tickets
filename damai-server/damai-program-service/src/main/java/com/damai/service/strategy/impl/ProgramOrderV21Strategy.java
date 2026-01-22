@@ -7,19 +7,16 @@ import com.damai.dto.ProgramOrderCreateDto;
 import com.damai.dto.SeatDto;
 import com.damai.enums.CompositeCheckType;
 import com.damai.enums.ProgramOrderVersion;
-import com.damai.initialize.base.AbstractApplicationCommandLineRunnerHandler;
 import com.damai.initialize.impl.composite.CompositeContainer;
 import com.damai.locallock.LocalLockCache;
 import com.damai.repeatexecutelimit.annotion.RepeatExecuteLimit;
 import com.damai.service.ProgramOrderService;
-import com.damai.service.strategy.ProgramOrderContext;
 import com.damai.service.strategy.ProgramOrderStrategy;
 import com.damai.servicelock.LockType;
 import com.damai.util.ServiceLockTool;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RLock;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -36,7 +33,7 @@ import static com.damai.core.DistributedLockConstants.PROGRAM_ORDER_CREATE_V2;
  **/
 @Slf4j
 @Component
-public class ProgramOrderV21Strategy extends AbstractApplicationCommandLineRunnerHandler implements ProgramOrderStrategy {
+public class ProgramOrderV21Strategy implements ProgramOrderStrategy {
     
     @Autowired
     private ProgramOrderService programOrderService;
@@ -97,12 +94,7 @@ public class ProgramOrderV21Strategy extends AbstractApplicationCommandLineRunne
     }
     
     @Override
-    public Integer executeOrder() {
-        return 2;
-    }
-    
-    @Override
-    public void executeInit(final ConfigurableApplicationContext context) {
-        ProgramOrderContext.add(ProgramOrderVersion.V21_VERSION.getVersion(),this);
+    public String version() {
+        return ProgramOrderVersion.V21_VERSION.getVersion();
     }
 }
