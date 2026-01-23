@@ -55,7 +55,7 @@ CREATE TABLE `d_program_0` (
                                PRIMARY KEY (`id`),
                                KEY `program_group_id_idx` (`program_group_id`) USING BTREE,
                                KEY `issue_time_idx` (`issue_time`) USING BTREE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='节目表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4  COMMENT='节目表';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -127,7 +127,7 @@ CREATE TABLE `d_program_1` (
                                PRIMARY KEY (`id`),
                                KEY `program_group_id_idx` (`program_group_id`) USING BTREE,
                                KEY `issue_time_idx` (`issue_time`) USING BTREE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='节目表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4  COMMENT='节目表';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -187,7 +187,7 @@ CREATE TABLE `d_program_group_0` (
                                      `edit_time` datetime NOT NULL COMMENT '编辑时间',
                                      `status` tinyint(1) NOT NULL DEFAULT '1' COMMENT '1:正常 0:删除',
                                      PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='节目分组表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4  COMMENT='节目分组表';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -215,7 +215,7 @@ CREATE TABLE `d_program_group_1` (
                                      `edit_time` datetime NOT NULL COMMENT '编辑时间',
                                      `status` tinyint(1) NOT NULL DEFAULT '1' COMMENT '1:正常 0:删除',
                                      PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='节目分组表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4  COMMENT='节目分组表';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -244,7 +244,7 @@ CREATE TABLE `d_program_record_task_0` (
                                            `status` tinyint(1) NOT NULL DEFAULT '1' COMMENT '1:正常 0:删除',
                                            PRIMARY KEY (`id`),
                                            KEY `program_record_task_create_time_idx` (`create_time`) USING BTREE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='节目对账记录任务表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4  COMMENT='节目对账记录任务表';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -272,7 +272,7 @@ CREATE TABLE `d_program_record_task_1` (
                                            `status` tinyint(1) NOT NULL DEFAULT '1' COMMENT '1:正常 0:删除',
                                            PRIMARY KEY (`id`),
                                            KEY `program_record_task_create_time_idx` (`create_time`) USING BTREE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='节目对账记录任务表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4  COMMENT='节目对账记录任务表';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -305,7 +305,7 @@ CREATE TABLE `d_program_show_time_0` (
                                          KEY `program_id_idx` (`program_id`) USING BTREE,
                                          KEY `show_time_idx` (`show_time`) USING BTREE,
                                          KEY `show_day_time_idx` (`show_day_time`) USING BTREE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='节目演出时间表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4  COMMENT='节目演出时间表';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -339,7 +339,7 @@ CREATE TABLE `d_program_show_time_1` (
                                          KEY `program_id_idx` (`program_id`) USING BTREE,
                                          KEY `show_time_idx` (`show_time`) USING BTREE,
                                          KEY `show_day_time_idx` (`show_day_time`) USING BTREE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='节目演出时间表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4  COMMENT='节目演出时间表';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -375,7 +375,7 @@ CREATE TABLE `d_seat_0` (
                             KEY `program_id_idx` (`program_id`) USING BTREE,
                             KEY `row_code_idx` (`row_code`) USING BTREE,
                             KEY `col_code_idx` (`col_code`) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=2131 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='座位表';
+) ENGINE=InnoDB AUTO_INCREMENT=2131 DEFAULT CHARSET=utf8mb4  COMMENT='座位表';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -411,7 +411,7 @@ CREATE TABLE `d_seat_1` (
                             KEY `program_id_idx` (`program_id`) USING BTREE,
                             KEY `row_code_idx` (`row_code`) USING BTREE,
                             KEY `col_code_idx` (`col_code`) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=1291 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='座位表';
+) ENGINE=InnoDB AUTO_INCREMENT=1291 DEFAULT CHARSET=utf8mb4  COMMENT='座位表';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -442,7 +442,7 @@ CREATE TABLE `d_ticket_category_0` (
                                        `edit_time` datetime NOT NULL COMMENT '编辑时间',
                                        `status` tinyint(1) NOT NULL DEFAULT '1' COMMENT '1:正常 0:删除',
                                        PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='节目票档表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4  COMMENT='节目票档表';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -473,7 +473,7 @@ CREATE TABLE `d_ticket_category_1` (
                                        `edit_time` datetime NOT NULL COMMENT '编辑时间',
                                        `status` tinyint(1) NOT NULL DEFAULT '1' COMMENT '1:正常 0:删除',
                                        PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='节目票档表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4  COMMENT='节目票档表';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -504,4 +504,4 @@ CREATE TABLE `undo_log` (
                             PRIMARY KEY (`branch_id`,`xid`),
                             UNIQUE KEY `ux_undo_log` (`xid`,`branch_id`),
                             KEY `ix_log_created` (`log_created`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='AT transaction mode undo table';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4  COMMENT='AT transaction mode undo table';

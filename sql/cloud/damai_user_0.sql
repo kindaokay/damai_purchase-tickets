@@ -13,7 +13,7 @@ CREATE TABLE `d_ticket_user_0` (
                                    `edit_time` datetime NOT NULL COMMENT '编辑时间',
                                    `status` tinyint(1) NOT NULL DEFAULT '1' COMMENT '1:正常 0:删除',
                                    PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='购票人表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4  COMMENT='购票人表';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -42,7 +42,7 @@ CREATE TABLE `d_ticket_user_1` (
                                    `edit_time` datetime NOT NULL COMMENT '编辑时间',
                                    `status` tinyint(1) NOT NULL DEFAULT '1' COMMENT '1:正常 0:删除',
                                    PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='购票人表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4  COMMENT='购票人表';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -77,7 +77,7 @@ CREATE TABLE `d_user_0` (
                             `edit_time` datetime DEFAULT NULL COMMENT '编辑时间',
                             `status` tinyint(1) NOT NULL DEFAULT '1' COMMENT '1:正常 0:删除',
                             PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='用户表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4  COMMENT='用户表';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -112,7 +112,7 @@ CREATE TABLE `d_user_1` (
                             `edit_time` datetime DEFAULT NULL COMMENT '编辑时间',
                             `status` tinyint(1) NOT NULL DEFAULT '1' COMMENT '1:正常 0:删除',
                             PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='用户表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4  COMMENT='用户表';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -141,7 +141,7 @@ CREATE TABLE `d_user_email_0` (
                                   `status` tinyint(1) NOT NULL DEFAULT '1' COMMENT '1:正常 0:删除',
                                   PRIMARY KEY (`id`),
                                   KEY `email_idx` (`email`) USING BTREE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='用户邮箱表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4  COMMENT='用户邮箱表';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -169,7 +169,7 @@ CREATE TABLE `d_user_email_1` (
                                   `status` tinyint(1) NOT NULL DEFAULT '1' COMMENT '1:正常 0:删除',
                                   PRIMARY KEY (`id`),
                                   KEY `email_idx` (`email`) USING BTREE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='用户邮箱表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4  COMMENT='用户邮箱表';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -197,7 +197,7 @@ CREATE TABLE `d_user_mobile_0` (
                                    `status` tinyint(1) NOT NULL DEFAULT '1' COMMENT '1:正常 0:删除',
                                    PRIMARY KEY (`id`),
                                    KEY `mobile_idx` (`mobile`) USING BTREE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='用户手机表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4  COMMENT='用户手机表';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -225,7 +225,7 @@ CREATE TABLE `d_user_mobile_1` (
                                    `status` tinyint(1) NOT NULL DEFAULT '1' COMMENT '1:正常 0:删除',
                                    PRIMARY KEY (`id`),
                                    KEY `mobile_idx` (`mobile`) USING BTREE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='用户手机表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4  COMMENT='用户手机表';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
