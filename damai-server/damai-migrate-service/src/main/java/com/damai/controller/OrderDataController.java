@@ -5,10 +5,8 @@ import com.damai.dto.ShardingMigrationDto;
 import com.damai.service.ShardingMigrationService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -42,7 +40,7 @@ public class OrderDataController {
      */
     @Operation(summary = "分库分表扩容迁移（基因法方案1）")
     @PostMapping(value = "/sharding/migrate")
-    public ApiResponse<Map<String, Object>> shardingMigrate(@Valid @RequestBody ShardingMigrationDto dto) {
+    public ApiResponse<Map<String, Object>> shardingMigrate() {
         try {
             //从2库4表扩容到2库8表
             ShardingMigrationDto shardingMigrationDto = new ShardingMigrationDto();
@@ -52,14 +50,14 @@ public class OrderDataController {
             shardingMigrationDto.setNewTableCount(8);
             shardingMigrationDto.setBatchSize(1000);
             shardingMigrationDto.setDryRun(false);
-            ShardingMigrationService.MigrationStatistics statistics = shardingMigrationService.migrate(dto);
+            ShardingMigrationService.MigrationStatistics statistics = shardingMigrationService.migrate(shardingMigrationDto);
             
             Map<String, Object> result = new HashMap<>(8);
             result.put("totalScanned", statistics.totalScanned);
             result.put("totalMigrated", statistics.totalMigrated);
             result.put("totalSkipped", statistics.totalSkipped);
-            result.put("dryRun", dto.getDryRun());
-            result.put("message", dto.getDryRun() ? "预演完成，未实际迁移" : "迁移完成");
+            result.put("dryRun", shardingMigrationDto.getDryRun());
+            result.put("message", shardingMigrationDto.getDryRun() ? "预演完成，未实际迁移" : "迁移完成");
             
             return ApiResponse.ok(result);
         } catch (Exception e) {
