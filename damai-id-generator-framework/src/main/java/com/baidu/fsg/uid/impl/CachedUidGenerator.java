@@ -94,6 +94,12 @@ public class CachedUidGenerator extends DefaultUidGenerator implements Disposabl
     }
     
     @Override
+    public long getOrderNumber(long userId) {
+        return super.getOrderNumber(userId);
+    }
+    
+    @Deprecated
+    @Override
     public long getOrderNumber(long userId,long tableCount) {
         return super.getOrderNumber(userId,tableCount);
     }

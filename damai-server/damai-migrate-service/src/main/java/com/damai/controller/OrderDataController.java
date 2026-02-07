@@ -1,34 +1,69 @@
 package com.damai.controller;
 
 import com.damai.common.ApiResponse;
-import com.damai.shardingsphere.virtual.ShardingExpansionService;
+import com.damai.dto.ShardingMigrationDto;
+import com.damai.service.ShardingMigrationService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.HashMap;
+import java.util.Map;
+
 /**
  * @program: 极度真实还原大麦网高并发实战项目。 添加 阿星不是程序员 微信，添加时备注 大麦 来获取项目的完整资料 
- * @description: 订单数据 控制层
+ * @description: 订单数据迁移 控制层
  * @author: 阿星不是程序员
  **/
 @RestController
 @RequestMapping("/order/data")
-@Tag(name = "order/data", description = "订单数据")
+@Tag(name = "order/data", description = "订单数据迁移")
 public class OrderDataController {
     
     @Autowired
-    private ShardingExpansionService expansionService;
+    private ShardingMigrationService shardingMigrationService;
     
-    @Operation(summary  = "执行虚拟分片方式的扩容")
-    @RequestMapping("/virtual/expand")
-    public ApiResponse<Void> virtualExpand() {
+    /**
+     * 分库分表扩容迁移接口（基因法方案1）
+     * 
+     * 使用 Hint 强制路由策略，直接指定物理库表
+     * 
+     * 使用场景：从 2库4表 扩容到 2库8表
+     * 
+     * 注意事项：
+     * 1. 执行前请确保新表已创建（d_order_4 ~ d_order_7）
+     * 2. 建议先使用 dryRun=true 预演，确认迁移数量后再正式执行
+     * 3. 迁移完成后需要修改 order-service 的 shardingsphere 配置文件
+     */
+    @Operation(summary = "分库分表扩容迁移（基因法方案1）")
+    @PostMapping(value = "/sharding/migrate")
+    public ApiResponse<Map<String, Object>> shardingMigrate(@Valid @RequestBody ShardingMigrationDto dto) {
         try {
-            expansionService.executeExpansion();
-            return ApiResponse.ok();
+            //从2库4表扩容到2库8表
+            ShardingMigrationDto shardingMigrationDto = new ShardingMigrationDto();
+            shardingMigrationDto.setOldDatabaseCount(2);
+            shardingMigrationDto.setOldTableCount(4);
+            shardingMigrationDto.setNewDatabaseCount(2);
+            shardingMigrationDto.setNewTableCount(8);
+            shardingMigrationDto.setBatchSize(1000);
+            shardingMigrationDto.setDryRun(false);
+            ShardingMigrationService.MigrationStatistics statistics = shardingMigrationService.migrate(dto);
+            
+            Map<String, Object> result = new HashMap<>(8);
+            result.put("totalScanned", statistics.totalScanned);
+            result.put("totalMigrated", statistics.totalMigrated);
+            result.put("totalSkipped", statistics.totalSkipped);
+            result.put("dryRun", dto.getDryRun());
+            result.put("message", dto.getDryRun() ? "预演完成，未实际迁移" : "迁移完成");
+            
+            return ApiResponse.ok(result);
         } catch (Exception e) {
-            return ApiResponse.error(e.getMessage());
+            return ApiResponse.error("迁移失败：" + e.getMessage());
         }
     }
 }

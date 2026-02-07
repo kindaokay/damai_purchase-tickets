@@ -16,7 +16,6 @@ import com.damai.scheduletask.PresentationOrderDataTask;
 import com.damai.scheduletask.ReconciliationTask;
 import com.damai.service.OrderService;
 import com.damai.service.OrderTaskService;
-import com.damai.shardingsphere.VirtualShardingRouteManager;
 import com.damai.vo.AccountOrderCountVo;
 import com.damai.vo.OrderGetVo;
 import com.damai.vo.OrderListVo;
@@ -58,8 +57,6 @@ public class OrderController {
     @Autowired
     private ApiVerify apiVerify;
     
-    @Autowired
-    private VirtualShardingRouteManager virtualShardingRouteManager;
     
     @Operation(summary  = "订单创建(不提供给前端调用，只允许内部program服务调用)")
     @PostMapping(value = "/create")
@@ -127,13 +124,6 @@ public class OrderController {
     public ApiResponse<ReconciliationTaskData> reconciliationTaskAll() {
         apiVerify.verifyApi();
         reconciliationTask.reconciliationTask();
-        return ApiResponse.ok();
-    }
-
-    @Operation(summary  = "重置虚拟分片路由缓存")
-    @PostMapping(value = "/reload/route/mapping/cache")
-    public ApiResponse<Void> reloadRouteMappingCache() {
-        virtualShardingRouteManager.reloadRouteMappingCache();
         return ApiResponse.ok();
     }
     

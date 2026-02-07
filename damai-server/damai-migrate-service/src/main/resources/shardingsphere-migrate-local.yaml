@@ -39,8 +39,6 @@ rules:
         tableStrategy:
           hint:
             shardingAlgorithmName: table-order-hint-algorithm
-    broadcastTables:
-      - d_sharding_route_mapping
     
     shardingAlgorithms:
       database-order-hint-algorithm:

@@ -14,7 +14,21 @@ import java.util.Objects;
 import java.util.Properties;
 /**
  * @program: 极度真实还原大麦网高并发实战项目。 添加 阿星不是程序员 微信，添加时备注 大麦 来获取项目的完整资料 
- * @description: 订单分库，pro版本优化了分片算法，基于基因位计算分库，更加均匀和高效
+ * @description: 订单分库算法（基因法方案1）
+ * 
+ * 核心设计：
+ * - 订单号生成时固定嵌入userId后6位作为基因
+ * - 分库时跳过表基因位，取中间的库基因位
+ * - 配置驱动：扩容时只需修改yaml配置，无需改代码
+ * 
+ * 基因位分布（userId后6位）：
+ * - 低位：表基因（log2(表数量)位）
+ * - 中位：库基因（log2(库数量)位）
+ * 
+ * 示例（2库4表 → 8库8表扩容）：
+ * - 当前：取bit2作为库索引（右移2位后取低1位）
+ * - 扩容后：取bit3-5作为库索引（右移3位后取低3位）
+ * 
  * @author: 阿星不是程序员
  **/
 public class DatabaseOrderComplexGeneArithmetic implements ComplexKeysShardingAlgorithm<Long> {
@@ -94,14 +108,20 @@ public class DatabaseOrderComplexGeneArithmetic implements ComplexKeysShardingAl
     }
     
     /**
-     * 计算给定表索引应分配到的数据库编号。
+     * 计算分库索引
+     * 
      * 核心思路：
      * - 分表使用ID的低位bit（最后 log2(tableCount) 位）
      * - 分库使用ID的中高位bit（跳过表基因位后的 log2(databaseCount) 位）
      * - 直接使用位运算，避免hashCode导致的分布不均
+     * 
+     * 基因位分布示例（userId后6位 = [bit5][bit4][bit3][bit2][bit1][bit0]）：
+     * - 2库4表：表基因=bit0-1，库基因=bit2
+     * - 4库8表：表基因=bit0-2，库基因=bit3-4
+     * - 8库8表：表基因=bit0-2，库基因=bit3-5（用满6位上限）
      *
      * @param databaseCount 数据库总数
-     * @param splicingKey    分片键
+     * @param splicingKey   分片键（订单号或userId，低6位包含相同基因）
      * @param tableCount    表总数
      * @return 分配到的数据库编号
      */

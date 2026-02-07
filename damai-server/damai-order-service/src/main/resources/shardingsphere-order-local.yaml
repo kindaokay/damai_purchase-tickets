@@ -103,9 +103,6 @@ rules:
             shardingColumn: program_id
             # 使用program_id分表算法
             shardingAlgorithmName: tableOrderProgramModModel
-    # 绑定表         
-    bindingTables:
-      - d_order,d_order_ticket_user
     # 具体的算法
     shardingAlgorithms:
       # d_order表分库算法

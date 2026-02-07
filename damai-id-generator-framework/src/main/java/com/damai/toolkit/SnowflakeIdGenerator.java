@@ -156,24 +156,9 @@ public class SnowflakeIdGenerator {
     }
     
     /**
-     * 生成订单编号（优化版 - 包含完整分库分表基因）
-     * 核心改进：订单编号的最后N位完全来自用户ID，确保：
-     * - 用订单编号查询和用户ID查询的分库分表位置完全一致
-     * - N = log2(tableCount) + log2(databaseCount)
-     * 算法逻辑：
-     * 1. 计算表基因位数和库基因位数
-     * 2. 从userId中提取对应的分片基因（后N位）
-     * 3. 将基因嵌入到订单号的低位
-     * 示例（2库×4表）：
-     * - 表基因：2位（log2(4) = 2）
-     * - 库基因：1位（log2(2) = 1）
-     * - 总共嵌入3位基因
-     * 
-     * @param userId 用户ID
-     * @param tableCount 分表数量（必须是2的幂次方，例如4）
-     * @param databaseCount 分库数量（必须是2的幂次方，例如2）
-     * @return 订单编号
+     * @deprecated 此方法已被废弃，不需要学习
      */
+    @Deprecated
     public synchronized long getOrderNumber(long userId, long tableCount, long databaseCount) {
         long timestamp = getBase();
         
@@ -200,8 +185,7 @@ public class SnowflakeIdGenerator {
     }
     
     /**
-     * 兼容旧版本的方法（仅包含表基因）
-     * @deprecated 建议使用 getOrderNumber(userId, tableCount, databaseCount)
+     * @deprecated 此方法已被废弃，不需要学习
      */
     @Deprecated
     public synchronized long getOrderNumber(long userId, long tableCount) {
@@ -212,6 +196,44 @@ public class SnowflakeIdGenerator {
                 | (workerId << workerIdShift)
                 | (sequence << sequenceShift)
                 | (userId % tableCount);
+    }
+    
+    /**
+     * 【方案1】生成订单编号 - 固定预留6位基因位
+     * 核心思想：预留足够多的基因位，支持未来扩容而无需修改生成逻辑
+     * 
+     * 基因位分配（6位可支持64种组合）：
+     * - 当前：2库4表 = 8种组合，占用3位
+     * - 最大支持：8库 × 8表 = 64种组合
+     * - 或：4库 × 16表 = 64种组合
+     * 
+     * 订单号结构：[时间戳][数据中心ID][机器ID][序列号][userId后6位]
+     * 
+     * 扩容时只需修改分片算法配置，无需修改此方法
+     * 
+     * @param userId 用户ID
+     * @return 订单编号
+     */
+    public synchronized long getOrderNumber(long userId) {
+        long timestamp = getBase();
+        
+        // 固定预留6位基因位，支持未来扩容
+        // 6位 = 可支持最大 2^6 = 64 种分片组合（8库8表）
+        long fixedGeneLength = 6L;
+        
+        // 创建基因掩码：0b111111 (6个1)
+        long geneMask = (1L << fixedGeneLength) - 1;
+        
+        // 从用户ID中提取后6位作为基因
+        long userGene = userId & geneMask;
+        
+        // 生成订单编号
+        // 结构：[时间戳][数据中心ID][机器ID][序列号左移6位][基因6位]
+        return ((timestamp - BASIS_TIME) << timestampLeftShift)
+                | (datacenterId << datacenterIdShift)
+                | (workerId << workerIdShift)
+                | (sequence << fixedGeneLength)
+                | userGene;
     }
 
     protected long tilNextMillis(long lastTimestamp) {

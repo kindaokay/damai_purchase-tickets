@@ -59,8 +59,6 @@ rules:
           standard:
             shardingColumn: program_id
             shardingAlgorithmName: tableOrderProgramModModel
-    bindingTables:
-      - d_order,d_order_ticket_user
     shardingAlgorithms:
       databaseOrderComplexGeneArithmetic:
         type: CLASS_BASED

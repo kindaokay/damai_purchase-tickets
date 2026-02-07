@@ -115,13 +115,20 @@ public class DefaultUidGenerator implements UidGenerator, InitializingBean {
         return snowflakeIdGenerator.nextId();
     }
     
+    @Deprecated
     @Override
     public long getOrderNumber(long userId,long tableCount,long databaseCount) {
         return snowflakeIdGenerator.getOrderNumber(userId,tableCount,databaseCount);
     }
     
     @Override
-    public long getOrderNumber(long userId,long tableCount) {
+    public long getOrderNumber(long userId) {
+        return snowflakeIdGenerator.getOrderNumber(userId);
+    }
+    
+    @Deprecated
+    @Override
+    public long getOrderNumber(long userId, long tableCount) {
         return snowflakeIdGenerator.getOrderNumber(userId,tableCount);
     }
 
