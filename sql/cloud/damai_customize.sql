@@ -129,7 +129,7 @@ CREATE TABLE `d_message_consumer_record` (
      KEY `d_message_consumer_record_message_trace_id_IDX` (`message_trace_id`) USING BTREE,
      KEY `d_message_consumer_record_message_id_IDX` (`message_id`) USING BTREE,
      KEY `d_message_consumer_record_consumer_time_IDX` (`consumer_time`) USING BTREE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='消息消费记录表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='消息消费记录表';
 
 
 CREATE TABLE `d_message_producer_record` (
@@ -152,4 +152,4 @@ CREATE TABLE `d_message_producer_record` (
      KEY `d_message_producer_record_message_trace_id_IDX` (`message_trace_id`) USING BTREE,
      KEY `d_message_producer_record_message_id_IDX` (`message_id`) USING BTREE,
      KEY `d_message_producer_record_send_time_IDX` (`send_time`) USING BTREE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='消息发送记录表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='消息发送记录表';
